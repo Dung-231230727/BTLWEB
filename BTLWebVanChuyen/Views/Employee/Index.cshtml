@@ -1,0 +1,33 @@
+﻿@model IEnumerable<BTLWebVanChuyen.Models.Employee>
+
+@{
+    ViewData["Title"] = "Danh sách nhân viên";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<a asp-action="Create" class="btn btn-primary mb-2">Thêm nhân viên</a>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Họ tên</th>
+            <th>Email</th>
+            <th>Vai trò</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var emp in Model)
+        {
+            <tr>
+                <td>@emp.User.FullName</td>
+                <td>@emp.User.Email</td>
+                <td>@emp.Role</td>
+                <td>
+                    <a asp-action="Delete" asp-route-id="@emp.Id" class="btn btn-danger btn-sm">Xóa</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
