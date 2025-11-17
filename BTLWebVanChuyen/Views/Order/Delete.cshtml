@@ -1,0 +1,34 @@
+﻿@model BTLWebVanChuyen.Models.Order
+@{
+    ViewData["Title"] = "Xóa đơn hàng";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<h4>Bạn có chắc chắn muốn xóa đơn hàng này?</h4>
+
+<dl class="row">
+    <dt class="col-sm-3">Khách hàng</dt>
+    <dd class="col-sm-9">@Model.Customer.User.FullName</dd>
+
+    <dt class="col-sm-3">Dispatcher</dt>
+    <dd class="col-sm-9">@Model.Dispatcher?.User.FullName</dd>
+
+    <dt class="col-sm-3">Shipper</dt>
+    <dd class="col-sm-9">@Model.Shipper?.User.FullName</dd>
+
+    <dt class="col-sm-3">Pickup Area</dt>
+    <dd class="col-sm-9">@Model.PickupArea.AreaName</dd>
+
+    <dt class="col-sm-3">Delivery Area</dt>
+    <dd class="col-sm-9">@Model.DeliveryArea.AreaName</dd>
+
+    <dt class="col-sm-3">Trạng thái</dt>
+    <dd class="col-sm-9">@Model.Status</dd>
+</dl>
+
+<form asp-action="DeleteConfirmed" method="post">
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Xóa</button>
+    <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+</form>

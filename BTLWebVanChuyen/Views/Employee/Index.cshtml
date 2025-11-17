@@ -1,20 +1,21 @@
 ﻿@model IEnumerable<BTLWebVanChuyen.Models.Employee>
-
 @{
     ViewData["Title"] = "Danh sách nhân viên";
 }
 
 <h2>@ViewData["Title"]</h2>
 
-<a asp-action="Create" class="btn btn-primary mb-2">Thêm nhân viên</a>
+<p>
+    <a class="btn btn-primary" asp-action="Create">Thêm nhân viên mới</a>
+</p>
 
-<table class="table table-bordered table-striped">
+<table class="table table-striped">
     <thead>
         <tr>
-            <th>Họ tên</th>
+            <th>Full Name</th>
             <th>Email</th>
-            <th>Vai trò</th>
-            <th>Hành động</th>
+            <th>Role</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -25,7 +26,8 @@
                 <td>@emp.User.Email</td>
                 <td>@emp.Role</td>
                 <td>
-                    <a asp-action="Delete" asp-route-id="@emp.Id" class="btn btn-danger btn-sm">Xóa</a>
+                    <a class="btn btn-sm btn-info" asp-action="Edit" asp-route-id="@emp.Id">Sửa</a>
+                    <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@emp.Id">Xóa</a>
                 </td>
             </tr>
         }

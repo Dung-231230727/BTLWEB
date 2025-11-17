@@ -1,0 +1,44 @@
+﻿@model BTLWebVanChuyen.Models.PriceTable
+
+@{
+    ViewData["Title"] = "Sửa cước phí";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label class="form-label">Khu vực</label>
+        <select asp-for="AreaId" asp-items="@(new SelectList(ViewBag.Areas, "AreaId", "AreaName", Model.AreaId))" class="form-control">
+            <option value="">-- Chọn khu vực --</option>
+        </select>
+        <span asp-validation-for="AreaId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Giá cơ bản</label>
+        <input asp-for="BasePrice" class="form-control" />
+        <span asp-validation-for="BasePrice" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Giá/km</label>
+        <input asp-for="PricePerKm" class="form-control" />
+        <span asp-validation-for="PricePerKm" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Giá/kg</label>
+        <input asp-for="WeightPrice" class="form-control" />
+        <span asp-validation-for="WeightPrice" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Cập nhật</button>
+    <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

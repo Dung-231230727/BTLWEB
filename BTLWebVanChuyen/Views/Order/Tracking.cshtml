@@ -1,0 +1,18 @@
+﻿@{
+    ViewData["Title"] = "Tra cứu đơn hàng";
+}
+
+<h2>Tra cứu đơn hàng</h2>
+
+<form asp-action="Tracking" method="post" class="mb-3">
+    <div class="mb-3">
+        <label class="form-label">Nhập mã vận đơn:</label>
+        <input type="text" name="trackingCode" class="form-control" placeholder="MVD171120250001" />
+    </div>
+    <button type="submit" class="btn btn-primary">Tra cứu</button>
+</form>
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-danger">@ViewBag.Error</div>
+}

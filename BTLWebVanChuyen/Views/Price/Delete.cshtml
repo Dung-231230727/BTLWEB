@@ -1,0 +1,31 @@
+﻿@model BTLWebVanChuyen.Models.PriceTable
+
+@{
+    ViewData["Title"] = "Xóa cước phí";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<h4>Bạn có chắc chắn muốn xóa cước phí này?</h4>
+
+<div>
+    <dl class="row">
+        <dt class="col-sm-2">Khu vực</dt>
+        <dd class="col-sm-10">@Model.Area?.AreaName</dd>
+
+        <dt class="col-sm-2">Giá cơ bản</dt>
+        <dd class="col-sm-10">@Model.BasePrice.ToString("N0")</dd>
+
+        <dt class="col-sm-2">Giá/km</dt>
+        <dd class="col-sm-10">@Model.PricePerKm.ToString("N0")</dd>
+
+        <dt class="col-sm-2">Giá/kg</dt>
+        <dd class="col-sm-10">@Model.WeightPrice.ToString("N0")</dd>
+    </dl>
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Xóa</button>
+    <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+</form>

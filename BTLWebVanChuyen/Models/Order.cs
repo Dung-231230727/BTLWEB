@@ -9,10 +9,10 @@
         public Customer Customer { get; set; } = null!;
 
         // Employee
-        public int? DispatcherId { get; set; }
+        public int DispatcherId { get; set; }
         public Employee? Dispatcher { get; set; }
 
-        public int? ShipperId { get; set; }
+        public int ShipperId { get; set; }
         public Employee? Shipper { get; set; }
 
         // Area
@@ -23,11 +23,12 @@
         public Area DeliveryArea { get; set; } = null!;
 
         // Details
+        public string TrackingCode { get; set; } = string.Empty;
         public string PickupAddress { get; set; } = string.Empty;
         public string DeliveryAddress { get; set; } = string.Empty;
-        public decimal DistanceKm { get; set; }
-        public decimal WeightKg { get; set; }
-        public decimal TotalPrice { get; set; }
+        public decimal DistanceKm { get; set; } = 0;
+        public decimal WeightKg { get; set; } = 0;
+        public decimal TotalPrice { get; set; } = 0;
 
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public DateTime CreatedAt { get; set; } = DateTime.Now;

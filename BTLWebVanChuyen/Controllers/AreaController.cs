@@ -13,7 +13,6 @@ public class AreaController : Controller
     public async Task<IActionResult> Index() => View(await _context.Areas.ToListAsync());
 
     public IActionResult Create() => View();
-
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(Area area)
     {
@@ -31,7 +30,7 @@ public class AreaController : Controller
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(Area area)
+    public async Task<IActionResult> Edit(int id, Area area)
     {
         if (!ModelState.IsValid) return View(area);
         _context.Update(area);

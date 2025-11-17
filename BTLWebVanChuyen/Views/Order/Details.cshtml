@@ -1,0 +1,90 @@
+﻿@model BTLWebVanChuyen.Models.Order
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng";
+    var shippers = ViewBag.Shippers as List<BTLWebVanChuyen.Models.Employee>;
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<dl class="row">
+    <dt class="col-sm-3">Mã vận đơn</dt>
+    <dd class="col-sm-9">@Model.TrackingCode</dd>
+
+    <dt class="col-sm-3">Khách hàng</dt>
+    <dd class="col-sm-9">@Model.Customer.User.FullName</dd>
+
+    <dt class="col-sm-3">Dispatcher</dt>
+    <dd class="col-sm-9">@Model.Dispatcher?.User.FullName</dd>
+
+    <dt class="col-sm-3">Shipper</dt>
+    <dd class="col-sm-9">@Model.Shipper?.User.FullName</dd>
+
+    <dt class="col-sm-3">Khu vực lấy</dt>
+    <dd class="col-sm-9">@Model.PickupArea.AreaName</dd>
+
+    <dt class="col-sm-3">Khu vực giao</dt>
+    <dd class="col-sm-9">@Model.DeliveryArea.AreaName</dd>
+
+    <dt class="col-sm-3">Địa chỉ lấy</dt>
+    <dd class="col-sm-9">@Model.PickupAddress</dd>
+
+    <dt class="col-sm-3">Địa chỉ giao</dt>
+    <dd class="col-sm-9">@Model.DeliveryAddress</dd>
+
+    <dt class="col-sm-3">Khoảng cách (km)</dt>
+    <dd class="col-sm-9">@Model.DistanceKm</dd>
+
+    <dt class="col-sm-3">Trọng lượng (kg)</dt>
+    <dd class="col-sm-9">@Model.WeightKg</dd>
+
+    <dt class="col-sm-3">Tổng tiền</dt>
+    <dd class="col-sm-9">@Model.TotalPrice</dd>
+
+    <dt class="col-sm-3">Trạng thái</dt>
+    <dd class="col-sm-9">@Model.Status</dd>
+
+    <dt class="col-sm-3">Ngày tạo</dt>
+    <dd class="col-sm-9">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+</dl>
+
+<hr />
+
+@* Dispatcher: gán Shipper *@
+@if (User.IsInRole("Dispatcher"))
+{
+    <h4>Gán Shipper</h4>
+    <form asp-action="Assign" method="post">
+        <input type="hidden" name="orderId" value="@Model.Id" />
+        <select name="shipperId" class="form-control">
+            <option value="">-- Chọn Shipper --</option>
+            @if (shippers != null)
+            {
+                foreach (var shipper in shippers)
+                {
+                    var selected = Model.ShipperId == shipper.Id ? "selected" : "";
+                    <option value="@shipper.Id" selected="@selected">@shipper.User.FullName</option>
+                }
+            }
+        </select>
+        <button type="submit" class="btn btn-primary mt-2">Gán</button>
+    </form>
+}
+
+@* Shipper: cập nhật trạng thái *@
+@if (User.IsInRole("Shipper"))
+{
+    <h4>Cập nhật trạng thái</h4>
+    <form asp-action="UpdateStatus" method="post">
+        <input type="hidden" name="orderId" value="@Model.Id" />
+        <select name="status" class="form-control">
+            @foreach (var status in Enum.GetValues(typeof(BTLWebVanChuyen.Models.OrderStatus)))
+            {
+                var selected = Model.Status == (OrderStatus)status ? "selected" : "";
+                <option value="@status" selected="@selected">@status</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-success mt-2">Cập nhật</button>
+    </form>
+}
+
+<a asp-action="Index" class="btn btn-secondary mt-3">Quay lại</a>

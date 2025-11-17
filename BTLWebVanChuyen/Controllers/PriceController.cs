@@ -3,9 +3,6 @@ using BTLWebVanChuyen.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-{
-
-}
 
 [Authorize(Roles = "Admin")]
 public class PriceController : Controller
@@ -13,16 +10,13 @@ public class PriceController : Controller
     private readonly ApplicationDbContext _context;
     public PriceController(ApplicationDbContext context) => _context = context;
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index() => View(await _context.PriceTables.Include(p => p.Area).ToListAsync());
+
+    public IActionResult Create()
     {
-        var prices = await _context.PriceTables
-            .Include(p => p.Area)
-            .ToListAsync();
-        return View(prices);
+        ViewBag.Areas = _context.Areas.ToList();
+        return View();
     }
-
-    public IActionResult Create() => View();
-
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PriceTable price)
     {
@@ -40,7 +34,7 @@ public class PriceController : Controller
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(PriceTable price)
+    public async Task<IActionResult> Edit(int id, PriceTable price)
     {
         if (!ModelState.IsValid) return View(price);
         _context.Update(price);
@@ -50,7 +44,7 @@ public class PriceController : Controller
 
     public async Task<IActionResult> Delete(int id)
     {
-        var price = await _context.PriceTables.FindAsync(id);
+        var price = await _context.PriceTables.Include(p => p.Area).FirstOrDefaultAsync(p => p.Id == id);
         if (price == null) return NotFound();
         return View(price);
     }

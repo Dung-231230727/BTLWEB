@@ -1,0 +1,93 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using BTLWebVanChuyen.Models
+@inject UserManager<ApplicationUser> UserManager
+@model IEnumerable<Order>
+
+@{
+    ViewData["Title"] = "Danh sách đơn hàng";
+    var shippers = ViewBag.Shippers as List<Employee> ?? new List<Employee>();
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@if (User.IsInRole("Customer"))
+{
+    <p>
+        <a class="btn btn-success" asp-action="Create">Tạo đơn hàng mới</a>
+    </p>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Khách hàng</th>
+            <th>Nhân viên điều phối</th>
+            <th>Nhân viên giao hàng</th>
+            <th>Khu vực lấy</th>
+            <th>Khu vực giao</th>
+            <th>Trạng thái</th>
+            <th>Ngày tạo</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var order in Model)
+        {
+            <tr>
+                <td>@order.Customer.User.FullName</td>
+                <td>@order.Dispatcher?.User.FullName</td>
+                <td>@order.Shipper?.User.FullName</td>
+                <td>@order.PickupArea.AreaName</td>
+                <td>@order.DeliveryArea.AreaName</td>
+                <td>@order.Status</td>
+                <td>@order.CreatedAt.ToString("dd/MM/yyyy")</td>
+                <td>
+                    <a class="btn btn-sm btn-info" asp-action="Details" asp-route-id="@order.Id">Xem</a>
+
+                    @if (User.IsInRole("Admin") || User.IsInRole("Dispatcher"))
+                    {
+                        <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@order.Id">Sửa</a>
+                    }
+
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@order.Id">Xóa</a>
+                    }
+
+                    @* Dispatcher: Gán Shipper *@
+                    @if (User.IsInRole("Dispatcher"))
+                    {
+                        <form asp-action="Assign" method="post" class="form-inline mt-1">
+                            <input type="hidden" name="orderId" value="@order.Id" />
+                            <select name="shipperId" class="form-control form-control-sm">
+                                <option value="">-- Chọn Shipper --</option>
+                                @foreach (var shipper in shippers)
+                                {
+                                    var selected = order.ShipperId == shipper.Id ? "selected" : "";
+                                    <option value="@shipper.Id" selected="@(selected)">@shipper.User.FullName</option>
+                                }
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-primary ml-1">Gán</button>
+                        </form>
+                    }
+
+                    @* Shipper: Cập nhật trạng thái *@
+                    @if (User.IsInRole("Shipper"))
+                    {
+                        <form asp-action="UpdateStatus" method="post" class="form-inline mt-1">
+                            <input type="hidden" name="orderId" value="@order.Id" />
+                            <select name="status" class="form-control form-control-sm">
+                                @foreach (var status in Enum.GetValues(typeof(OrderStatus)))
+                                {
+                                    var selected = order.Status == (OrderStatus)status ? "selected" : "";
+                                    <option value="@status" selected="@(selected)">@status</option>
+                                }
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-success ml-1">Cập nhật</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

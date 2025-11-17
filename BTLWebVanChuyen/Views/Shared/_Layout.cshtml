@@ -46,20 +46,20 @@
                                 <li class="nav-item"><a class="nav-link" href="/Area">Quản lý Khu vực</a></li>
                                 <li class="nav-item"><a class="nav-link" href="/Price">Quản lý cước phí</a></li>
                                 <li class="nav-item"><a class="nav-link" href="/Report">Báo cáo & Thống kê</a></li>
+                                <li class="nav-item"><a class="nav-link" href="/Order">Quản lý đơn hàng</a></li>
+
                             }
 
                             <!-- MENU CHO NHÂN VIÊN ĐIỀU PHỐI -->
                             @if (User?.IsInRole("Dispatcher") ?? false)
                             {
-                                <li class="nav-item"><a class="nav-link" href="/Dispatch/PendingOrders">Đơn hàng chờ gán</a></li>
-                                <li class="nav-item"><a class="nav-link" href="/Dispatch/AssignedOrders">Đơn hàng đã gán</a></li>
+                                <li class="nav-item"><a class="nav-link" href="/Order">Quản lý đơn hàng</a></li>
                             }
 
                             <!-- MENU CHO NHÂN VIÊN GIAO HÀNG -->
                             @if (User?.IsInRole("Shipper") ?? false)
                             {
-                                <li class="nav-item"><a class="nav-link" href="/Delivery/MyTasks">Đơn hàng được giao</a></li>
-                                <li class="nav-item"><a class="nav-link" href="/Delivery/History">Lịch sử giao hàng</a></li>
+                                <li class="nav-item"><a class="nav-link" href="/Order">Đơn hàng được giao</a></li>
                             }
 
                             <!-- ĐĂNG XUẤT -->

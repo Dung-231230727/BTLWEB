@@ -1,0 +1,38 @@
+﻿@model IEnumerable<BTLWebVanChuyen.Models.PriceTable>
+
+@{
+    ViewData["Title"] = "Quản lý cước phí";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<p>
+    <a class="btn btn-primary" asp-action="Create">Thêm mới</a>
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Khu vực</th>
+            <th>Giá cơ bản</th>
+            <th>Giá/km</th>
+            <th>Giá/kg</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Area?.AreaName</td>
+                <td>@item.BasePrice.ToString("N0")</td>
+                <td>@item.PricePerKm.ToString("N0")</td>
+                <td>@item.WeightPrice.ToString("N0")</td>
+                <td>
+                    <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@item.Id">Sửa</a>
+                    <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@item.Id">Xóa</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

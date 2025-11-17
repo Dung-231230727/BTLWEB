@@ -19,26 +19,19 @@ namespace BTLWebVanChuyen.Controllers
             _userManager = userManager;
         }
 
-        // GET: /Employee
         public async Task<IActionResult> Index()
         {
-            var employees = await _context.Employees
-                .Include(e => e.User)
-                .ToListAsync();
+            var employees = await _context.Employees.Include(e => e.User).ToListAsync();
             return View(employees);
         }
 
-        // GET: /Employee/Create
         public IActionResult Create() => View();
 
-        // POST: /Employee/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Employee employee, string role)
         {
             if (!ModelState.IsValid) return View(employee);
 
-            // Tạo ApplicationUser
             var user = new ApplicationUser
             {
                 UserName = employee.User.Email,
@@ -46,7 +39,8 @@ namespace BTLWebVanChuyen.Controllers
                 FullName = employee.User.FullName,
                 IsEmployee = true
             };
-            var result = await _userManager.CreateAsync(user, "123@Abc"); // default password
+
+            var result = await _userManager.CreateAsync(user, "123@Abc"); // password mặc định
             if (!result.Succeeded)
             {
                 foreach (var error in result.Errors)
@@ -54,41 +48,53 @@ namespace BTLWebVanChuyen.Controllers
                 return View(employee);
             }
 
-            // Thêm role
             await _userManager.AddToRoleAsync(user, role);
-
-            // Thêm Employee
             employee.UserId = user.Id;
             employee.Role = role == "Dispatcher" ? EmployeeRole.Dispatcher : EmployeeRole.Shipper;
             _context.Employees.Add(employee);
             await _context.SaveChangesAsync();
-
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: /Employee/Delete/{id}
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Edit(int id)
         {
-            var employee = await _context.Employees
-                .Include(e => e.User)
-                .FirstOrDefaultAsync(e => e.Id == id);
+            var employee = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
             if (employee == null) return NotFound();
             return View(employee);
         }
 
-        // POST: /Employee/Delete/{id}
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, Employee employee, string role)
+        {
+            if (id != employee.Id) return NotFound();
+            if (!ModelState.IsValid) return View(employee);
+
+            var emp = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
+            emp.User.FullName = employee.User.FullName;
+            emp.User.Email = employee.User.Email;
+            emp.Role = role == "Dispatcher" ? EmployeeRole.Dispatcher : EmployeeRole.Shipper;
+            _context.Update(emp);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Delete(int id)
+        {
+            var employee = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
+            if (employee == null) return NotFound();
+            return View(employee);
+        }
+
+        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var employee = await _context.Employees.FindAsync(id);
-            if (employee != null)
+            var emp = await _context.Employees.FindAsync(id);
+            if (emp != null)
             {
-                var user = await _userManager.FindByIdAsync(employee.UserId);
-                if (user != null)
-                    await _userManager.DeleteAsync(user);
+                var user = await _userManager.FindByIdAsync(emp.UserId);
+                if (user != null) await _userManager.DeleteAsync(user);
 
-                _context.Employees.Remove(employee);
+                _context.Employees.Remove(emp);
                 await _context.SaveChangesAsync();
             }
             return RedirectToAction(nameof(Index));

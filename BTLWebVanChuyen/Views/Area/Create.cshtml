@@ -1,0 +1,23 @@
+﻿@model BTLWebVanChuyen.Models.Area
+@{
+    ViewData["Title"] = "Thêm khu vực mới";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Create" method="post">
+    <div class="form-group">
+        <label>Area Name</label>
+        <input asp-for="AreaName" class="form-control" />
+        <span asp-validation-for="AreaName" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-success">Thêm</button>
+    <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

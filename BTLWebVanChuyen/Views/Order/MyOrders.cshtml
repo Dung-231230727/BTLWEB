@@ -1,0 +1,40 @@
+﻿@model IEnumerable<BTLWebVanChuyen.Models.Order>
+@{
+    ViewData["Title"] = "Đơn hàng của tôi";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<p>
+    <a class="btn btn-success" asp-action="Create">Tạo đơn hàng mới</a>
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Khu vực lấy</th>
+            <th>Khu vực giao</th>
+            <th>Nhân viên điều phối</th>
+            <th>Nhân viên giao hàng</th>
+            <th>Trạng thái</th>
+            <th>Ngày tạo</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var order in Model)
+        {
+            <tr>
+                <td>@order.PickupArea.AreaName</td>
+                <td>@order.DeliveryArea.AreaName</td>
+                <td>@order.Dispatcher?.User.FullName</td>
+                <td>@order.Shipper?.User.FullName</td>
+                <td>@order.Status</td>
+                <td>@order.CreatedAt.ToString("dd/MM/yyyy")</td>
+                <td>
+                    <a class="btn btn-sm btn-info" asp-action="Details" asp-route-id="@order.Id">Xem</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

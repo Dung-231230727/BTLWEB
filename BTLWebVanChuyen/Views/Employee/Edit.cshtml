@@ -1,0 +1,39 @@
+﻿@model BTLWebVanChuyen.Models.Employee
+@{
+    ViewData["Title"] = "Chỉnh sửa nhân viên";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="form-group">
+        <label>Full Name</label>
+        <input asp-for="User.FullName" class="form-control" />
+        <span asp-validation-for="User.FullName" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label>Email</label>
+        <input asp-for="User.Email" class="form-control" />
+        <span asp-validation-for="User.Email" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label>Role</label>
+        <select name="role" class="form-control">
+            <option value="Dispatcher" selected="@(Model.Role == EmployeeRole.Dispatcher ? "selected" : "")">Nhân viên điều phối</option>
+            <option value="Shipper" selected="@(Model.Role == EmployeeRole.Shipper ? "selected" : "")">Nhân viên giao hàng</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Cập nhật</button>
+    <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

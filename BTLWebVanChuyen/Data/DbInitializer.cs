@@ -13,10 +13,10 @@ namespace BTLWebVanChuyen.Data
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            // Ensure database is created
+            // 1. Ensure database
             await context.Database.MigrateAsync();
 
-            // 1. Seed Roles
+            // 2. Seed Roles
             string[] roles = new[] { "Admin", "Customer", "Dispatcher", "Shipper" };
             foreach (var role in roles)
             {
@@ -24,7 +24,7 @@ namespace BTLWebVanChuyen.Data
                     await roleManager.CreateAsync(new IdentityRole(role));
             }
 
-            // 2. Seed Admin user
+            // 3. Seed Admin
             string adminEmail = "admin@webvanchuyen.com";
             if (await userManager.FindByEmailAsync(adminEmail) == null)
             {
@@ -36,12 +36,11 @@ namespace BTLWebVanChuyen.Data
                     IsCustomer = false,
                     IsEmployee = false
                 };
-
-                await userManager.CreateAsync(admin, "Admin@123"); // password mặc định
+                await userManager.CreateAsync(admin, "Admin@123");
                 await userManager.AddToRoleAsync(admin, "Admin");
             }
 
-            // 3. Seed sample Customers
+            // 4. Seed Customers
             if (!context.Customers.Any())
             {
                 for (int i = 1; i <= 3; i++)
@@ -60,18 +59,17 @@ namespace BTLWebVanChuyen.Data
                         await userManager.CreateAsync(user, "Customer@123");
                         await userManager.AddToRoleAsync(user, "Customer");
 
-                        var customer = new Customer
+                        context.Customers.Add(new Customer
                         {
-                            UserId = user.Id,
+                            UserId = user.Id, // string
                             Address = $"Địa chỉ {i}"
-                        };
-                        context.Customers.Add(customer);
+                        });
                     }
                 }
                 await context.SaveChangesAsync();
             }
 
-            // 4. Seed sample Employees
+            // 5. Seed Employees
             if (!context.Employees.Any())
             {
                 // Dispatcher
@@ -121,7 +119,7 @@ namespace BTLWebVanChuyen.Data
                 await context.SaveChangesAsync();
             }
 
-            // 5. Optional: Seed Areas
+            // 6. Seed Areas
             if (!context.Areas.Any())
             {
                 context.Areas.AddRange(
@@ -132,7 +130,7 @@ namespace BTLWebVanChuyen.Data
                 await context.SaveChangesAsync();
             }
 
-            // 6. Optional: Seed PriceTable
+            // 7. Seed PriceTable
             if (!context.PriceTables.Any())
             {
                 var areas = context.Areas.ToList();

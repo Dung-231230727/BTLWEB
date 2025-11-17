@@ -1,0 +1,82 @@
+﻿@model BTLWebVanChuyen.Models.ViewModels.OrderViewModel
+
+@{
+    ViewData["Title"] = "Tạo đơn hàng mới";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Create" method="post">
+    <div class="form-group">
+        <label>Khu vực lấy</label>
+        <select asp-for="Order.PickupAreaId" class="form-control" id="PickupAreaId"
+                asp-items="@(new SelectList(Model.pickupAreas, "AreaId", "AreaName"))"></select>
+    </div>
+
+    <div class="form-group">
+        <label>Khu vực giao</label>
+        <select asp-for="Order.DeliveryAreaId" class="form-control" id="DeliveryAreaId"
+                asp-items="@(new SelectList(Model.deliveryAreas, "AreaId", "AreaName"))"></select>
+    </div>
+
+    <div class="form-group">
+        <label>Địa chỉ lấy</label>
+        <input asp-for="Order.PickupAddress" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label>Địa chỉ giao</label>
+        <input asp-for="Order.DeliveryAddress" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label>Khoảng cách (km)</label>
+        <input asp-for="Order.DistanceKm" class="form-control" id="DistanceKm" />
+    </div>
+
+    <div class="form-group">
+        <label>Trọng lượng (kg)</label>
+        <input asp-for="Order.WeightKg" class="form-control" id="WeightKg" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Phí vận chuyển dự kiến</label>
+        <input class="form-control" id="TotalPrice" value="0" disabled />
+    </div>
+
+    <button type="submit" class="btn btn-success">Tạo</button>
+    <a asp-action="MyOrders" class="btn btn-secondary">Hủy</a>
+</form>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+
+    <script>
+        // Serialize PriceTables để JS tính phí
+        const priceTables = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables));
+
+        function calculateTotal() {
+            const pickupId = parseInt(document.getElementById("PickupAreaId").value);
+            const deliveryId = parseInt(document.getElementById("DeliveryAreaId").value);
+            const distance = parseFloat(document.getElementById("DistanceKm").value) || 0;
+            const weight = parseFloat(document.getElementById("WeightKg").value) || 0;
+
+            const pickup = priceTables.find(p => p.AreaId === pickupId);
+            const delivery = priceTables.find(p => p.AreaId === deliveryId);
+
+            let total = 0;
+            if (pickup && delivery) {
+                total = pickup.BasePrice + delivery.BasePrice;
+                total += distance * (pickup.PricePerKm + delivery.PricePerKm);
+                total += weight * (pickup.WeightPrice + delivery.WeightPrice);
+            }
+
+            document.getElementById("TotalPrice").value = total.toLocaleString();
+        }
+
+        document.getElementById("PickupAreaId").addEventListener("change", calculateTotal);
+        document.getElementById("DeliveryAreaId").addEventListener("change", calculateTotal);
+        document.getElementById("DistanceKm").addEventListener("input", calculateTotal);
+        document.getElementById("WeightKg").addEventListener("input", calculateTotal);
+    </script>
+}
