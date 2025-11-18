@@ -1,0 +1,25 @@
+﻿@model BTLWebVanChuyen.Models.ViewModels.ReportViewModel
+@{
+    ViewData["Title"] = "Báo cáo tổng quan";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<table class="table table-bordered w-50">
+    <tr>
+        <th>Tổng đơn</th>
+        <td>@Model.TotalOrders</td>
+    </tr>
+    <tr>
+        <th>Đơn giao thành công</th>
+        <td>@Model.DeliveredOrders</td>
+    </tr>
+    <tr>
+        <th>Đơn hủy/thất bại</th>
+        <td>@Model.FailedOrders</td>
+    </tr>
+    <tr>
+        <th>Doanh thu</th>
+        <td>@Model.TotalRevenue.ToString("N0")</td>
+    </tr>
+</table>

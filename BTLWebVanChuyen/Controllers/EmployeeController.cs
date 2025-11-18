@@ -3,6 +3,7 @@ using BTLWebVanChuyen.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace BTLWebVanChuyen.Controllers
@@ -21,20 +22,33 @@ namespace BTLWebVanChuyen.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var employees = await _context.Employees.Include(e => e.User).ToListAsync();
+            var employees = await _context.Employees
+                .Include(e => e.User)
+                .Include(e => e.Area)
+                .ToListAsync();
             return View(employees);
         }
 
-        public IActionResult Create() => View();
+        public IActionResult Create()
+        {
+            ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
+            ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName");
+            return View();
+        }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Employee employee, string role)
         {
-            if (!ModelState.IsValid) return View(employee);
+            if (!ModelState.IsValid)
+            {
+                ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
+                ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName", employee.AreaId);
+                return View(employee);
+            }
 
             var user = new ApplicationUser
             {
-                UserName = employee.User.Email,
+                UserName = employee.User!.Email,
                 Email = employee.User.Email,
                 FullName = employee.User.FullName,
                 IsEmployee = true
@@ -45,6 +59,8 @@ namespace BTLWebVanChuyen.Controllers
             {
                 foreach (var error in result.Errors)
                     ModelState.AddModelError("", error.Description);
+                ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
+                ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName", employee.AreaId);
                 return View(employee);
             }
 
@@ -60,6 +76,9 @@ namespace BTLWebVanChuyen.Controllers
         {
             var employee = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
             if (employee == null) return NotFound();
+
+            ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
+            ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName", employee.AreaId);
             return View(employee);
         }
 
@@ -67,12 +86,19 @@ namespace BTLWebVanChuyen.Controllers
         public async Task<IActionResult> Edit(int id, Employee employee, string role)
         {
             if (id != employee.Id) return NotFound();
-            if (!ModelState.IsValid) return View(employee);
+            if (!ModelState.IsValid)
+            {
+                ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
+                ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName", employee.AreaId);
+                return View(employee);
+            }
 
             var emp = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
-            emp.User.FullName = employee.User.FullName;
+            emp!.User!.FullName = employee.User!.FullName;
             emp.User.Email = employee.User.Email;
             emp.Role = role == "Dispatcher" ? EmployeeRole.Dispatcher : EmployeeRole.Shipper;
+            emp.AreaId = employee.AreaId; // cập nhật khu vực
+
             _context.Update(emp);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));

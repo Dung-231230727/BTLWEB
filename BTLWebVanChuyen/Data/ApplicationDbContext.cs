@@ -18,6 +18,7 @@ namespace BTLWebVanChuyen.Data
         public DbSet<PriceTable> PriceTables { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderLog> OrderLogs { get; set; }
+        public DbSet<Report> Reports { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

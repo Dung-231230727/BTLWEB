@@ -1,4 +1,5 @@
 ﻿@model IEnumerable<BTLWebVanChuyen.Models.Employee>
+@using BTLWebVanChuyen.Utility
 @{
     ViewData["Title"] = "Danh sách nhân viên";
 }
@@ -12,9 +13,10 @@
 <table class="table table-striped">
     <thead>
         <tr>
-            <th>Full Name</th>
+            <th>Họ tên</th>
             <th>Email</th>
-            <th>Role</th>
+            <th>Vai trò</th>
+            <th>Khu vực</th>
             <th></th>
         </tr>
     </thead>
@@ -22,9 +24,10 @@
         @foreach (var emp in Model)
         {
             <tr>
-                <td>@emp.User.FullName</td>
+                <td>@emp.User!.FullName</td>
                 <td>@emp.User.Email</td>
-                <td>@emp.Role</td>
+                <td>@emp.Role.GetDisplayName()</td>
+                <td>@(emp.Area?.AreaName ?? "Chưa gán")</td>
                 <td>
                     <a class="btn btn-sm btn-info" asp-action="Edit" asp-route-id="@emp.Id">Sửa</a>
                     <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@emp.Id">Xóa</a>

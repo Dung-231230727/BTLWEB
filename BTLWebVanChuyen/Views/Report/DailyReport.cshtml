@@ -1,0 +1,38 @@
+﻿@model List<BTLWebVanChuyen.Models.ViewModels.ReportViewModel>
+@{
+    ViewData["Title"] = "Báo cáo theo ngày";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form method="get" class="form-inline mb-3">
+    <label>From: </label>
+    <input type="date" name="fromDate" class="form-control mx-1" value="@ViewBag.FromDate" />
+    <label>To: </label>
+    <input type="date" name="toDate" class="form-control mx-1" value="@ViewBag.ToDate" />
+    <button type="submit" class="btn btn-primary">Lọc</button>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Ngày</th>
+            <th>Tổng đơn</th>
+            <th>Đơn giao thành công</th>
+            <th>Đơn hủy/thất bại</th>
+            <th>Doanh thu</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@(item.ReportDate.HasValue? item.ReportDate.Value.ToString("dd/MM/yyyy") : "")</td>
+                <td>@item.TotalOrders</td>
+                <td>@item.DeliveredOrders</td>
+                <td>@item.FailedOrders</td>
+                <td>@item.TotalRevenue.ToString("N0")</td>
+            </tr>
+        }
+    </tbody>
+</table>

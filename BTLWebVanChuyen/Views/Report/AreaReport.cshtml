@@ -1,0 +1,30 @@
+﻿@model List<BTLWebVanChuyen.Models.ViewModels.ReportViewModel>
+@{
+    ViewData["Title"] = "Báo cáo theo khu vực";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Khu vực</th>
+            <th>Tổng đơn</th>
+            <th>Đơn giao thành công</th>
+            <th>Đơn hủy/thất bại</th>
+            <th>Doanh thu</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.AreaName</td>
+                <td>@item.TotalOrders</td>
+                <td>@item.DeliveredOrders</td>
+                <td>@item.FailedOrders</td>
+                <td>@item.TotalRevenue.ToString("N0")</td>
+            </tr>
+        }
+    </tbody>
+</table>

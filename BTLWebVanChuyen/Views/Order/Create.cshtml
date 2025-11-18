@@ -7,6 +7,7 @@
 <h2>@ViewData["Title"]</h2>
 
 <form asp-action="Create" method="post">
+    <div asp-validation-summary="All" class="text-danger"></div>
     <div class="form-group">
         <label>Khu vực lấy</label>
         <select asp-for="Order.PickupAreaId" class="form-control" id="PickupAreaId"
@@ -53,7 +54,7 @@
 
     <script>
         // Serialize PriceTables để JS tính phí
-        const priceTables = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables));
+        const priceTables = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables))');
 
         function calculateTotal() {
             const pickupId = parseInt(document.getElementById("PickupAreaId").value);

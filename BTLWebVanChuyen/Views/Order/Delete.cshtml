@@ -9,13 +9,13 @@
 
 <dl class="row">
     <dt class="col-sm-3">Khách hàng</dt>
-    <dd class="col-sm-9">@Model.Customer.User.FullName</dd>
+    <dd class="col-sm-9">@Model.Customer?.User?.FullName</dd>
 
     <dt class="col-sm-3">Dispatcher</dt>
-    <dd class="col-sm-9">@Model.Dispatcher?.User.FullName</dd>
+    <dd class="col-sm-9">@Model.Dispatcher?.User?.FullName</dd>
 
     <dt class="col-sm-3">Shipper</dt>
-    <dd class="col-sm-9">@Model.Shipper?.User.FullName</dd>
+    <dd class="col-sm-9">@Model.Shipper?.User?.FullName</dd>
 
     <dt class="col-sm-3">Pickup Area</dt>
     <dd class="col-sm-9">@Model.PickupArea.AreaName</dd>

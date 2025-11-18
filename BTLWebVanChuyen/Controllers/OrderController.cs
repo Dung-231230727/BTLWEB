@@ -1,6 +1,7 @@
 ﻿using BTLWebVanChuyen.Data;
 using BTLWebVanChuyen.Models;
 using BTLWebVanChuyen.Models.ViewModels;
+using BTLWebVanChuyen.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -21,27 +22,73 @@ namespace BTLWebVanChuyen.Controllers
         }
 
         // ============================
-        // ADMIN + DISPATCHER: Danh sách đơn
+        // ADMIN + DISPATCHER + Shipper: Danh sách đơn
         // ============================
-        [Authorize(Roles = "Admin,Dispatcher")]
+        [Authorize(Roles = "Admin,Dispatcher,Shipper")]
         public async Task<IActionResult> Index()
         {
-            var orders = await _context.Orders
-                .Include(o => o.Customer).ThenInclude(c => c.User)
-                .Include(o => o.Dispatcher).ThenInclude(d => d.User)
-                .Include(o => o.Shipper).ThenInclude(s => s.User)
-                .Include(o => o.PickupArea)
-                .Include(o => o.DeliveryArea)
-                .ToListAsync();
+            var user = await _userManager.GetUserAsync(User);
 
-            if (User.IsInRole("Dispatcher"))
+            List<Order> orders = new List<Order>();
+            List<Employee> shippers = new List<Employee>();
+
+            if (User.IsInRole("Admin"))
             {
-                ViewBag.Shippers = _context.Employees
+                // Admin xem tất cả đơn hàng
+                orders = await _context.Orders
+                    .Include(o => o.Customer).ThenInclude(c => c.User)
+                    .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
+                    .Include(o => o.Shipper).ThenInclude(s => s!.User)
+                    .Include(o => o.PickupArea)
+                    .Include(o => o.DeliveryArea)
+                    .ToListAsync();
+
+                shippers = await _context.Employees
                     .Where(e => e.Role == EmployeeRole.Shipper)
                     .Include(e => e.User)
-                    .ToList();
+                    .ToListAsync();
+            }
+            else if (User.IsInRole("Dispatcher"))
+            {
+                // Dispatcher chỉ xem đơn hàng cùng khu vực
+                var dispatcher = await _context.Employees
+                    .FirstOrDefaultAsync(e => e.UserId == user!.Id && e.Role == EmployeeRole.Dispatcher);
+
+                if (dispatcher == null) return Forbid();
+
+                orders = await _context.Orders
+                    .Include(o => o.Customer).ThenInclude(c => c.User)
+                    .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
+                    .Include(o => o.Shipper).ThenInclude(s => s!.User)
+                    .Include(o => o.PickupArea)
+                    .Include(o => o.DeliveryArea)
+                    .Where(o => o.PickupAreaId == dispatcher.AreaId)
+                    .ToListAsync();
+
+                shippers = await _context.Employees
+                    .Where(e => e.Role == EmployeeRole.Shipper && e.AreaId == dispatcher.AreaId)
+                    .Include(e => e.User)
+                    .ToListAsync();
+            }
+            else if (User.IsInRole("Shipper"))
+            {
+                // Shipper chỉ xem đơn được giao cho mình
+                var shipper = await _context.Employees
+                    .FirstOrDefaultAsync(e => e.UserId == user!.Id && e.Role == EmployeeRole.Shipper);
+
+                if (shipper == null) return Forbid();
+
+                orders = await _context.Orders
+                    .Include(o => o.Customer).ThenInclude(c => c.User)
+                    .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
+                    .Include(o => o.Shipper).ThenInclude(s => s!.User)
+                    .Include(o => o.PickupArea)
+                    .Include(o => o.DeliveryArea)
+                    .Where(o => o.ShipperId == shipper.Id)
+                    .ToListAsync();
             }
 
+            ViewBag.Shippers = shippers;
             return View(orders);
         }
 
@@ -89,7 +136,7 @@ namespace BTLWebVanChuyen.Controllers
             }
 
             var user = await _userManager.GetUserAsync(User);
-            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user!.Id);
             if (customer == null)
             {
                 ModelState.AddModelError("", "Không tìm thấy thông tin khách hàng.");
@@ -131,14 +178,16 @@ namespace BTLWebVanChuyen.Controllers
         public async Task<IActionResult> MyOrders()
         {
             var user = await _userManager.GetUserAsync(User);
-            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user!.Id);
 
             var orders = await _context.Orders
-                .Where(o => o.CustomerId == customer.Id)
+                .Where(o => o.CustomerId == customer!.Id)
                 .Include(o => o.PickupArea)
                 .Include(o => o.DeliveryArea)
                 .Include(o => o.Dispatcher)
+                    .ThenInclude(d => d!.User)
                 .Include(o => o.Shipper)
+                    .ThenInclude(s => s!.User)
                 .ToListAsync();
 
             return View(orders);
@@ -151,8 +200,8 @@ namespace BTLWebVanChuyen.Controllers
         {
             var order = await _context.Orders
                 .Include(o => o.Customer).ThenInclude(c => c.User)
-                .Include(o => o.Dispatcher).ThenInclude(d => d.User)
-                .Include(o => o.Shipper).ThenInclude(s => s.User)
+                .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
+                .Include(o => o.Shipper).ThenInclude(s => s!.User)
                 .Include(o => o.PickupArea)
                 .Include(o => o.DeliveryArea)
                 .Include(o => o.OrderLogs)
@@ -177,31 +226,82 @@ namespace BTLWebVanChuyen.Controllers
         [HttpPost, Authorize(Roles = "Dispatcher"), ValidateAntiForgeryToken]
         public async Task<IActionResult> Assign(int orderId, int shipperId)
         {
-            var order = await _context.Orders.FindAsync(orderId);
-            var shipper = await _context.Employees.FindAsync(shipperId);
+            // Lấy đơn hàng
+            var order = await _context.Orders
+                .Include(o => o.PickupArea)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
 
-            if (order == null || shipper == null) return NotFound();
+            // Lấy shipper
+            var shipper = await _context.Employees.FirstOrDefaultAsync(e => e.Id == shipperId && e.Role == EmployeeRole.Shipper);
 
-            order.ShipperId = shipperId;
+            // Lấy dispatcher hiện tại
+            var user = await _userManager.GetUserAsync(User);
+            var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id && e.Role == EmployeeRole.Dispatcher);
+
+            if (order == null || shipper == null || dispatcher == null)
+                return NotFound();
+
+            // Kiểm tra khu vực: shipper phải cùng khu vực lấy của đơn
+            if (shipper.AreaId != order.PickupAreaId)
+                return BadRequest("Shipper không hợp lệ cho khu vực này");
+
+            // Gán shipper và dispatcher
+            order.ShipperId = shipper.Id;
+            order.DispatcherId = dispatcher.Id;
             order.Status = OrderStatus.Assigned;
 
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            return Json(new
+            {
+                dispatcherName = dispatcher.User!.FullName,
+                statusDisplay = order.Status.GetDisplayName()
+            });
         }
 
+
         // ============================
-        // SHIPPER: Cập nhật trạng thái đơn
+        // SHIPPER + Dispatcher: Cập nhật trạng thái đơn
         // ============================
-        [HttpPost, Authorize(Roles = "Shipper"), ValidateAntiForgeryToken]
+        [HttpPost, Authorize(Roles = "Shipper,Dispatcher"), ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateStatus(int orderId, OrderStatus status)
         {
-            var order = await _context.Orders.FindAsync(orderId);
-            if (order == null) return NotFound();
+            var order = await _context.Orders
+                .Include(o => o.Dispatcher)
+                    .ThenInclude(d => d!.User)
+                .Include(o => o.Shipper)
+                    .ThenInclude(s => s!.User)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null) return Json(new { success = false });
+
+            // Kiểm tra quyền cập nhật
+            if (User.IsInRole("Shipper"))
+            {
+                if (status != OrderStatus.Delivering &&
+                    status != OrderStatus.Delivered &&
+                    status != OrderStatus.Failed)
+                {
+                    return Json(new { success = false, message = "Không hợp lệ" });
+                }
+            }
+            else if (User.IsInRole("Dispatcher"))
+            {
+                if (status != OrderStatus.Cancelled || order.Status != OrderStatus.Failed)
+                {
+                    return Json(new { success = false, message = "Không hợp lệ" });
+                }
+            }
 
             order.Status = status;
             await _context.SaveChangesAsync();
 
-            return RedirectToAction(nameof(Index));
+            return Json(new
+            {
+                success = true,
+                statusDisplay = order.Status.GetDisplayName(),
+                dispatcherName = order.Dispatcher?.User?.FullName ?? ""
+            });
         }
 
         // ============================

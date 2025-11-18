@@ -1,7 +1,8 @@
 ﻿@model BTLWebVanChuyen.Models.Order
+@using BTLWebVanChuyen.Utility
 @{
     ViewData["Title"] = "Chi tiết đơn hàng";
-    var shippers = ViewBag.Shippers as List<BTLWebVanChuyen.Models.Employee>;
+    var shippers = ViewBag.Shippers as List<BTLWebVanChuyen.Models.Employee> ?? new List<BTLWebVanChuyen.Models.Employee>();
 }
 
 <h2>@ViewData["Title"]</h2>
@@ -11,13 +12,13 @@
     <dd class="col-sm-9">@Model.TrackingCode</dd>
 
     <dt class="col-sm-3">Khách hàng</dt>
-    <dd class="col-sm-9">@Model.Customer.User.FullName</dd>
+    <dd class="col-sm-9">@Model.Customer?.User?.FullName</dd>
 
     <dt class="col-sm-3">Dispatcher</dt>
-    <dd class="col-sm-9">@Model.Dispatcher?.User.FullName</dd>
+    <dd class="col-sm-9">@Model.Dispatcher?.User?.FullName</dd>
 
     <dt class="col-sm-3">Shipper</dt>
-    <dd class="col-sm-9">@Model.Shipper?.User.FullName</dd>
+    <dd class="col-sm-9">@Model.Shipper?.User?.FullName</dd>
 
     <dt class="col-sm-3">Khu vực lấy</dt>
     <dd class="col-sm-9">@Model.PickupArea.AreaName</dd>
@@ -41,7 +42,7 @@
     <dd class="col-sm-9">@Model.TotalPrice</dd>
 
     <dt class="col-sm-3">Trạng thái</dt>
-    <dd class="col-sm-9">@Model.Status</dd>
+    <dd class="col-sm-9">@Model.Status.GetDisplayName()</dd>
 
     <dt class="col-sm-3">Ngày tạo</dt>
     <dd class="col-sm-9">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
@@ -62,7 +63,7 @@
                 foreach (var shipper in shippers)
                 {
                     var selected = Model.ShipperId == shipper.Id ? "selected" : "";
-                    <option value="@shipper.Id" selected="@selected">@shipper.User.FullName</option>
+                    <option value="@shipper.Id" selected="@selected">@shipper.User?.FullName</option>
                 }
             }
         </select>
@@ -77,14 +78,26 @@
     <form asp-action="UpdateStatus" method="post">
         <input type="hidden" name="orderId" value="@Model.Id" />
         <select name="status" class="form-control">
-            @foreach (var status in Enum.GetValues(typeof(BTLWebVanChuyen.Models.OrderStatus)))
+            @foreach (var status in Enum.GetValues(typeof(OrderStatus)))
             {
-                var selected = Model.Status == (OrderStatus)status ? "selected" : "";
-                <option value="@status" selected="@selected">@status</option>
+                // Ép kiểu giá trị loop sang enum
+                var enumStatus = (OrderStatus)status;
+
+                // Logic 'selected': So sánh trạng thái hiện tại với trạng thái trong loop
+                var selected = Model.Status == enumStatus ? "selected" : "";
+
+                // Hiển thị tên đã định nghĩa bằng GetDisplayName()
+                <option value="@status" selected="@(selected)">
+                    @enumStatus.GetDisplayName() @* <--- ĐÃ SỬA VỊ TRÍ NÀY *@
+                </option>
             }
         </select>
         <button type="submit" class="btn btn-success mt-2">Cập nhật</button>
     </form>
 }
 
-<a asp-action="Index" class="btn btn-secondary mt-3">Quay lại</a>
+@{
+    var backAction = User.IsInRole("Customer") ? "MyOrders" : "Index";
+}
+<a asp-action="@backAction" class="btn btn-secondary mt-3">Quay lại</a>
+

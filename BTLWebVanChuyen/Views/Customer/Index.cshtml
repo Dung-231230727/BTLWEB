@@ -17,7 +17,7 @@
         @foreach (var customer in Model)
         {
             <tr>
-                <td>@customer.User.FullName</td>
+                <td>@customer.User!.FullName</td>
                 <td>@customer.User.Email</td>
                 <td>
                     <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@customer.Id">Xóa</a>

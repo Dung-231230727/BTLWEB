@@ -54,7 +54,7 @@
     @await Html.PartialAsync("_ValidationScriptsPartial")
 
     <script>
-        const priceTables = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables));
+        const priceTables = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables))');
 
         function calculateTotal() {
             const pickupId = parseInt(document.getElementById("PickupAreaId").value);

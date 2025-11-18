@@ -1,4 +1,5 @@
 ﻿@model IEnumerable<BTLWebVanChuyen.Models.Order>
+@using BTLWebVanChuyen.Utility
 @{
     ViewData["Title"] = "Đơn hàng của tôi";
 }
@@ -12,6 +13,7 @@
 <table class="table table-striped">
     <thead>
         <tr>
+            <th>Mã vận đơn</th>
             <th>Khu vực lấy</th>
             <th>Khu vực giao</th>
             <th>Nhân viên điều phối</th>
@@ -25,11 +27,12 @@
         @foreach (var order in Model)
         {
             <tr>
+                <td>@order.TrackingCode</td>
                 <td>@order.PickupArea.AreaName</td>
                 <td>@order.DeliveryArea.AreaName</td>
-                <td>@order.Dispatcher?.User.FullName</td>
-                <td>@order.Shipper?.User.FullName</td>
-                <td>@order.Status</td>
+                <td>@order.Dispatcher?.User?.FullName</td>
+                <td>@order.Shipper?.User?.FullName</td>
+                <td>@order.Status.GetDisplayName()</td>
                 <td>@order.CreatedAt.ToString("dd/MM/yyyy")</td>
                 <td>
                     <a class="btn btn-sm btn-info" asp-action="Details" asp-route-id="@order.Id">Xem</a>

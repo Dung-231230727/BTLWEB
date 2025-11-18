@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using BTLWebVanChuyen.Models
+@using BTLWebVanChuyen.Utility
 @inject UserManager<ApplicationUser> UserManager
 @model IEnumerable<Order>
 
@@ -34,53 +35,74 @@
         @foreach (var order in Model)
         {
             <tr>
-                <td>@order.Customer.User.FullName</td>
-                <td>@order.Dispatcher?.User.FullName</td>
-                <td>@order.Shipper?.User.FullName</td>
+                <td>@order.Customer?.User?.FullName</td>
+                <td class="dispatcher-name">@order.Dispatcher?.User?.FullName</td>
+                <td>@order.Shipper?.User?.FullName</td>
                 <td>@order.PickupArea.AreaName</td>
                 <td>@order.DeliveryArea.AreaName</td>
-                <td>@order.Status</td>
+                <td>@order.Status.GetDisplayName()</td>
                 <td>@order.CreatedAt.ToString("dd/MM/yyyy")</td>
                 <td>
                     <a class="btn btn-sm btn-info" asp-action="Details" asp-route-id="@order.Id">Xem</a>
 
+                    @* Admin + Dispatcher có quyền Edit *@
                     @if (User.IsInRole("Admin") || User.IsInRole("Dispatcher"))
                     {
                         <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@order.Id">Sửa</a>
                     }
 
+                    @* Admin có quyền Delete *@
                     @if (User.IsInRole("Admin"))
                     {
                         <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@order.Id">Xóa</a>
                     }
 
-                    @* Dispatcher: Gán Shipper *@
+                    @* Dispatcher: Gán Shipper và cập nhật trạng thái (chỉ thấy khi là Dispatcher) *@
                     @if (User.IsInRole("Dispatcher"))
                     {
-                        <form asp-action="Assign" method="post" class="form-inline mt-1">
+                        <form asp-action="Assign" method="post" class="form-inline mt-1 assign-form">
                             <input type="hidden" name="orderId" value="@order.Id" />
                             <select name="shipperId" class="form-control form-control-sm">
                                 <option value="">-- Chọn Shipper --</option>
                                 @foreach (var shipper in shippers)
                                 {
                                     var selected = order.ShipperId == shipper.Id ? "selected" : "";
-                                    <option value="@shipper.Id" selected="@(selected)">@shipper.User.FullName</option>
+                                    <option value="@shipper.Id" selected="@(selected)">@shipper.User?.FullName</option>
                                 }
                             </select>
-                            <button type="submit" class="btn btn-sm btn-primary ml-1">Gán</button>
+                            <button type="button" class="btn btn-sm btn-primary ml-1 btn-assign">Gán</button>
                         </form>
+                        @*Chỉ cập nhật khi đơn hàng ở trạng thái Failed*@
+                        @if (order.Status == OrderStatus.Failed)
+                        {
+                            <form asp-action="UpdateStatus" method="post" class="form-inline mt-1 cancel-form">
+                                <input type="hidden" name="orderId" value="@order.Id" />
+                                <select name="status" class="form-control form-control-sm">
+                                    <option value="@OrderStatus.Cancelled">
+                                        @OrderStatus.Cancelled.GetDisplayName()
+                                    </option>
+                                </select>
+                                <button type="button" class="btn btn-sm btn-danger ml-1 btn-cancel">Cập nhật</button>
+                            </form>
+                        }
                     }
 
-                    @* Shipper: Cập nhật trạng thái *@
+                    @* Shipper: Cập nhật trạng thái (chỉ thấy khi là Shipper) *@
                     @if (User.IsInRole("Shipper"))
                     {
-                        <form asp-action="UpdateStatus" method="post" class="form-inline mt-1">
+                        <form asp-action="UpdateStatus" method="post" class="form-inline mt-1 shipper-form">
                             <input type="hidden" name="orderId" value="@order.Id" />
                             <select name="status" class="form-control form-control-sm">
-                                @foreach (var status in Enum.GetValues(typeof(OrderStatus)))
+                                @foreach (var status in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
                                 {
-                                    var selected = order.Status == (OrderStatus)status ? "selected" : "";
-                                    <option value="@status" selected="@(selected)">@status</option>
+                                    // Chỉ cho phép 3 trạng thái shipper
+                                    if (status == OrderStatus.Delivering || status == OrderStatus.Delivered || status == OrderStatus.Failed)
+                                    {
+                                        var selected = order.Status == status ? "selected" : "";
+                                        <option value="@status" selected="@(selected)">
+                                            @status.GetDisplayName()
+                                        </option>
+                                    }
                                 }
                             </select>
                             <button type="submit" class="btn btn-sm btn-success ml-1">Cập nhật</button>
@@ -91,3 +113,93 @@
         }
     </tbody>
 </table>
+
+@section Scripts {
+    <script>
+        // Hàm chung cập nhật trạng thái Ajax
+        function updateOrderStatus(orderId, status, callback) {
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            fetch('@Url.Action("UpdateStatus")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token
+                },
+                body: `orderId=${orderId}&status=${status}`
+            })
+            .then(res => res.json())
+            .then(data => callback(data))
+            .catch(err => console.error(err));
+        }
+
+        // Dispatcher gán shipper
+        document.querySelectorAll('.btn-assign').forEach(btn => {
+            btn.type = "button"; // tránh submit
+            btn.addEventListener('click', function() {
+                var form = this.closest('.assign-form');
+                var orderId = form.querySelector('input[name="orderId"]').value;
+                var shipperId = form.querySelector('select[name="shipperId"]').value;
+                var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                fetch('@Url.Action("Assign")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token
+                    },
+                    body: `orderId=${orderId}&shipperId=${shipperId}`
+                })
+                .then(res => res.json())
+                .then(data => {
+                    var row = form.closest('tr');
+
+                    var dispatcherSpan = row.querySelector('.dispatcher-name');
+                    if(dispatcherSpan) dispatcherSpan.textContent = data.dispatcherName;
+
+                    row.querySelector('td:nth-child(6)').textContent = data.statusDisplay;
+
+                    var cancelForm = row.querySelector('.cancel-form');
+                    if(cancelForm) cancelForm.style.display = 'none';
+                })
+                .catch(err => console.error(err));
+            });
+        });
+
+        // Dispatcher cập nhật trạng thái Cancelled
+        document.querySelectorAll('.btn-cancel').forEach(btn => {
+            btn.type = "button";
+            btn.addEventListener('click', function() {
+                var form = this.closest('.cancel-form');
+                var orderId = form.querySelector('input[name="orderId"]').value;
+                var status = form.querySelector('select[name="status"]').value;
+
+                updateOrderStatus(orderId, status, function(data) {
+                    var row = form.closest('tr');
+                    row.querySelector('td:nth-child(6)').textContent = data.statusDisplay;
+                    var dispatcherSpan = row.querySelector('.dispatcher-name');
+                    if(dispatcherSpan) dispatcherSpan.textContent = data.dispatcherName;
+                });
+            });
+        });
+
+        // Shipper cập nhật trạng thái
+        document.querySelectorAll('.shipper-form').forEach(form => {
+            var btn = form.querySelector('button.btn-success');
+            if(btn) {
+                btn.type = "button"; // tránh submit form
+                btn.addEventListener('click', function() {
+                    var orderId = form.querySelector('input[name="orderId"]').value;
+                    var status = form.querySelector('select[name="status"]').value;
+
+                    updateOrderStatus(orderId, status, function(data) {
+                        var row = form.closest('tr');
+                        row.querySelector('td:nth-child(6)').textContent = data.statusDisplay;
+                    });
+                });
+            }
+        });
+    </script>
+}
+
+
+

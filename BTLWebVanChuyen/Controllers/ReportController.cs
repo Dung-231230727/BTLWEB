@@ -1,5 +1,6 @@
 ﻿using BTLWebVanChuyen.Data;
 using BTLWebVanChuyen.Models;
+using BTLWebVanChuyen.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,9 @@ namespace BTLWebVanChuyen.Controllers
         // Báo cáo tổng hợp theo ngày
         public async Task<IActionResult> DailyReport(DateTime? fromDate, DateTime? toDate)
         {
+            ViewBag.FromDate = fromDate?.ToString("yyyy-MM-dd");
+            ViewBag.ToDate = toDate?.ToString("yyyy-MM-dd");
+
             var query = _context.Orders.AsQueryable();
 
             if (fromDate.HasValue)
@@ -34,7 +38,7 @@ namespace BTLWebVanChuyen.Controllers
 
             var dailyData = await query
                 .GroupBy(o => o.CreatedAt.Date)
-                .Select(g => new DailyReport
+                .Select(g => new ReportViewModel
                 {
                     ReportDate = g.Key,
                     TotalOrders = g.Count(),
@@ -45,7 +49,7 @@ namespace BTLWebVanChuyen.Controllers
                 .OrderBy(r => r.ReportDate)
                 .ToListAsync();
 
-            return View(dailyData);
+            return View(dailyData); // View dùng List<ReportViewModel>
         }
 
         // Báo cáo tổng hợp theo khu vực
@@ -55,7 +59,7 @@ namespace BTLWebVanChuyen.Controllers
                 .Include(o => o.PickupArea)
                 .Include(o => o.DeliveryArea)
                 .GroupBy(o => o.PickupArea.AreaName)
-                .Select(g => new
+                .Select(g => new ReportViewModel
                 {
                     AreaName = g.Key,
                     TotalOrders = g.Count(),
@@ -65,7 +69,7 @@ namespace BTLWebVanChuyen.Controllers
                 })
                 .ToListAsync();
 
-            return View(data); // View sẽ hiển thị theo bảng
+            return View(data); // View dùng List<ReportViewModel>
         }
 
         // Báo cáo tổng quan: tổng đơn, doanh thu, đơn thất bại
@@ -78,7 +82,7 @@ namespace BTLWebVanChuyen.Controllers
                 .Where(o => o.Status == OrderStatus.Delivered)
                 .SumAsync(o => o.TotalPrice);
 
-            var summary = new DailyReport
+            var summary = new ReportViewModel
             {
                 ReportDate = DateTime.Now,
                 TotalOrders = totalOrders,
@@ -87,7 +91,7 @@ namespace BTLWebVanChuyen.Controllers
                 TotalRevenue = totalRevenue
             };
 
-            return View(summary);
+            return View(summary); // View dùng ReportViewModel
         }
     }
 }
