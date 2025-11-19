@@ -3,29 +3,60 @@
     ViewData["Title"] = "Quản lý khu vực";
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <div>
+        <h6 class="text-primary text-uppercase mb-1" style="letter-spacing: 1px;">Quản lý</h6>
+        <h2 class="text-dark fw-bold m-0"><i class="fa-solid fa-map-location-dot me-2 text-primary"></i> @ViewData["Title"]</h2>
+    </div>
+    <a class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-top" asp-action="Create">
+        <i class="fa-solid fa-plus me-2"></i>Thêm khu vực
+    </a>
+</div>
 
-<p>
-    <a class="btn btn-primary" asp-action="Create">Thêm khu vực mới</a>
-</p>
+<div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="py-4 ps-4 text-secondary text-uppercase font-weight-bold small border-0">Tên Khu vực</th>
+                        <th class="py-4 pe-4 text-center text-secondary text-uppercase font-weight-bold small border-0" style="width: 150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var area in Model)
+                    {
+                        <tr class="border-bottom">
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px;">
+                                        <i class="fa-solid fa-map-pin text-primary"></i>
+                                    </div>
+                                    <span class="fw-bold text-dark fs-5">@area.AreaName</span>
+                                </div>
+                            </td>
+                            <td class="pe-4 py-3 text-center">
+                                <div class="btn-group shadow-sm" role="group">
+                                    <a class="btn btn-light text-warning btn-sm" asp-action="Edit" asp-route-id="@area.AreaId" title="Sửa">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+                                    <a class="btn btn-light text-danger btn-sm" asp-action="Delete" asp-route-id="@area.AreaId" title="Xóa">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Area Name</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var area in Model)
+        @if (!Model.Any())
         {
-            <tr>
-                <td>@area.AreaName</td>
-                <td>
-                    <a class="btn btn-sm btn-info" asp-action="Edit" asp-route-id="@area.AreaId">Sửa</a>
-                    <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@area.AreaId">Xóa</a>
-                </td>
-            </tr>
+            <div class="text-center p-5">
+                <i class="fa-solid fa-map fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Chưa có khu vực nào được tạo.</p>
+            </div>
         }
-    </tbody>
-</table>
+    </div>
+</div>

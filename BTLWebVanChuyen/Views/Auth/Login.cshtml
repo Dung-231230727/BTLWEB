@@ -1,33 +1,69 @@
 ﻿@model BTLWebVanChuyen.ViewModels.LoginViewModel
 
 @{
-    ViewData["Title"] = "Đăng nhập";
+    ViewData["Title"] = "Đăng nhập hệ thống";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>@ViewData["Title"]</h2>
-
-<form asp-action="Login" method="post">
-    <div class="form-group mb-2">
-        <label asp-for="Email" class="form-label"></label>
-        <input asp-for="Email" class="form-control" />
-        <span asp-validation-for="Email" class="text-danger"></span>
+<div class="container-fluid bg-primary py-5 mb-5" style="background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1553413077-190dd305871c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'); background-size: cover; background-position: center;">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10 text-center">
+                <h1 class="display-3 text-white animated slideInDown">Đăng Nhập</h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb justify-content-center animated slideInDown">
+                        <li class="breadcrumb-item"><a class="text-white" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                        <li class="breadcrumb-item text-white active" aria-current="page">Đăng nhập</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
     </div>
+</div>
+<div class="container-fluid py-2">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5">
+                <div class="bg-light rounded p-5 shadow-sm wow fadeInUp" data-wow-delay="0.1s">
+                    <div class="text-center mb-4">
+                        <h3 class="text-primary text-uppercase">Chào mừng trở lại!</h3>
+                    </div>
+                    <form asp-action="Login" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-    <div class="form-group mb-2">
-        <label asp-for="Password" class="form-label"></label>
-        <input asp-for="Password" class="form-control" type="password" />
-        <span asp-validation-for="Password" class="text-danger"></span>
+                        <div class="form-floating mb-3">
+                            <input asp-for="Email" class="form-control border-0" id="floatingEmail" placeholder="name@example.com" style="height: 55px;">
+                            <label for="floatingEmail">Địa chỉ Email</label>
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <input asp-for="Password" type="password" class="form-control border-0" id="floatingPassword" placeholder="Password" style="height: 55px;">
+                            <label for="floatingPassword">Mật khẩu</label>
+                            <span asp-validation-for="Password" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <div class="form-check">
+                                <input asp-for="RememberMe" class="form-check-input" type="checkbox" id="rememberMe">
+                                <label class="form-check-label" for="rememberMe">Ghi nhớ tôi</label>
+                            </div>
+                            <a href="#" class="text-decoration-none small text-muted">Quên mật khẩu?</a>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary py-3 w-100 fw-bold">Đăng Nhập Ngay</button>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <p class="text-muted mb-0">Chưa có tài khoản? <a asp-action="Register" class="text-primary fw-bold text-decoration-none">Đăng ký tại đây</a></p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="form-check mb-2">
-        <input asp-for="RememberMe" class="form-check-input" />
-        <label asp-for="RememberMe" class="form-check-label"></label>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Đăng nhập</button>
-    <a asp-action="Register" class="btn btn-link">Đăng ký</a>
-</form>
-
+</div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }

@@ -4,56 +4,84 @@
     ViewData["Title"] = "Tạo đơn hàng mới";
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="row justify-content-center mt-4">
+    <div class="col-md-9 col-lg-8">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-primary text-white p-4 rounded-top-4 text-center">
+                <h3 class="mb-0 fw-bold"><i class="fa-solid fa-cart-plus me-2"></i> @ViewData["Title"]</h3>
+                <p class="mb-0 opacity-75">Điền thông tin chi tiết để tạo vận đơn</p>
+            </div>
 
-<form asp-action="Create" method="post">
-    <div asp-validation-summary="All" class="text-danger"></div>
-    <div class="form-group">
-        <label>Khu vực lấy</label>
-        <select asp-for="Order.PickupAreaId" class="form-control" id="PickupAreaId"
-                asp-items="@(new SelectList(Model.pickupAreas, "AreaId", "AreaName"))"></select>
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="All" class="alert alert-danger border-0 rounded-3 shadow-sm mb-4" style="display:none"></div>
+
+                    <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">1. Thông tin Vận chuyển</h5>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Khu vực lấy</label>
+                            <select asp-for="Order.PickupAreaId" class="form-select bg-light border-0" id="PickupAreaId" style="height: 50px;"
+                                    asp-items="@(new SelectList(Model.pickupAreas, "AreaId", "AreaName"))"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Khu vực giao</label>
+                            <select asp-for="Order.DeliveryAreaId" class="form-select bg-light border-0" id="DeliveryAreaId" style="height: 50px;"
+                                    asp-items="@(new SelectList(Model.deliveryAreas, "AreaId", "AreaName"))"></select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Địa chỉ lấy chi tiết</label>
+                        <input asp-for="Order.PickupAddress" class="form-control bg-light border-0" placeholder="Số nhà, tên đường..." style="height: 50px;" />
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Địa chỉ giao chi tiết</label>
+                        <input asp-for="Order.DeliveryAddress" class="form-control bg-light border-0" placeholder="Số nhà, tên đường..." style="height: 50px;" />
+                    </div>
+
+                    <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">2. Thông tin Hàng hóa & Người nhận</h5>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Khoảng cách (km)</label>
+                            <input asp-for="Order.DistanceKm" class="form-control bg-light border-0" id="DistanceKm" type="number" step="0.1" style="height: 50px;" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Trọng lượng (kg)</label>
+                            <input asp-for="Order.WeightKg" class="form-control bg-light border-0" id="WeightKg" type="number" step="0.1" style="height: 50px;" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Tên người nhận</label>
+                            <input asp-for="Order.ReceiverName" class="form-control bg-light border-0" style="height: 50px;" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">SĐT người nhận</label>
+                            <input asp-for="Order.ReceiverPhone" class="form-control bg-light border-0" style="height: 50px;" />
+                        </div>
+                    </div>
+
+                    <div class="bg-primary bg-opacity-10 p-4 rounded-4 mb-4 text-center border border-primary border-opacity-25">
+                        <h6 class="text-uppercase text-primary fw-bold mb-2">Tổng chi phí dự kiến</h6>
+                        <input id="TotalPrice" class="form-control-plaintext text-center fw-bold display-6 text-dark" readonly value="0 VNĐ" />
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-sm hover-top">Tạo đơn hàng</button>
+                        <a asp-action="Index" class="btn btn-light w-100 py-3 fw-bold rounded-pill text-secondary hover-top">Hủy bỏ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-
-    <div class="form-group">
-        <label>Khu vực giao</label>
-        <select asp-for="Order.DeliveryAreaId" class="form-control" id="DeliveryAreaId"
-                asp-items="@(new SelectList(Model.deliveryAreas, "AreaId", "AreaName"))"></select>
-    </div>
-
-    <div class="form-group">
-        <label>Địa chỉ lấy</label>
-        <input asp-for="Order.PickupAddress" class="form-control" />
-    </div>
-
-    <div class="form-group">
-        <label>Địa chỉ giao</label>
-        <input asp-for="Order.DeliveryAddress" class="form-control" />
-    </div>
-
-    <div class="form-group">
-        <label>Khoảng cách (km)</label>
-        <input asp-for="Order.DistanceKm" class="form-control" id="DistanceKm" />
-    </div>
-
-    <div class="form-group">
-        <label>Trọng lượng (kg)</label>
-        <input asp-for="Order.WeightKg" class="form-control" id="WeightKg" />
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Phí vận chuyển dự kiến</label>
-        <input class="form-control" id="TotalPrice" value="0" disabled />
-    </div>
-
-    <button type="submit" class="btn btn-success">Tạo</button>
-    <a asp-action="MyOrders" class="btn btn-secondary">Hủy</a>
-</form>
+</div>
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
-
+    @* SCRIPT GỐC: GIỮ NGUYÊN *@
     <script>
-        // Serialize PriceTables để JS tính phí
         const priceTables = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables))');
 
         function calculateTotal() {
@@ -72,7 +100,7 @@
                 total += weight * (pickup.WeightPrice + delivery.WeightPrice);
             }
 
-            document.getElementById("TotalPrice").value = total.toLocaleString();
+            document.getElementById("TotalPrice").value = total.toLocaleString() + " VNĐ";
         }
 
         document.getElementById("PickupAreaId").addEventListener("change", calculateTotal);

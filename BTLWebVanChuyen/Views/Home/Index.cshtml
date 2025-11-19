@@ -1,8 +1,146 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Trang chủ";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container-fluid bg-primary py-5 mb-5 hero-header" style="background: linear-gradient(rgba(102, 217, 239, 0.9), rgba(102, 217, 239, 0.7)), url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'); background-size: cover; background-position: center;">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h5 class="text-white text-uppercase mb-3 animated slideInDown" style="letter-spacing: 2px;">Dịch vụ Vận chuyển Uy tín</h5>
+                <h1 class="display-3 text-white mb-4 animated slideInDown fw-bold">Vận Chuyển Nhanh Chóng & An Toàn</h1>
+                <p class="fs-5 text-white mb-5 pb-2">Giải pháp logistics toàn diện cho mọi nhu cầu của bạn. Theo dõi hành trình đơn hàng mọi lúc, mọi nơi.</p>
+
+                <div class="position-relative w-100 mx-auto animated slideInDown" style="max-width: 600px;">
+                    <form asp-controller="Order" asp-action="Tracking" method="post">
+                        <div class="input-group input-group-lg shadow-lg rounded-pill overflow-hidden bg-white p-1">
+                            <input type="text" name="trackingCode" class="form-control border-0 rounded-pill ps-4" placeholder="Nhập mã vận đơn của bạn (VD: MVD...)" style="font-size: 1rem;" required>
+                            <button type="submit" class="btn btn-dark rounded-pill py-2 px-4 ms-2 fw-bold transition-hover">
+                                <i class="fa-solid fa-search me-2"></i>Tra cứu
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+<div class="container-fluid py-5">
+    <div class="container py-5">
+        <div class="row g-5">
+            <div class="col-lg-6">
+                <h6 class="text-secondary text-uppercase mb-3" style="letter-spacing: 1px;">Về Chúng Tôi</h6>
+                <h1 class="mb-4 fw-bold text-primary">Giải Pháp Vận Chuyển Tin Cậy Hàng Đầu</h1>
+                <p class="mb-4 text-muted">Chúng tôi cung cấp dịch vụ vận chuyển với cam kết cao nhất về thời gian và độ an toàn của hàng hóa. Với mạng lưới phủ sóng rộng khắp, FasterShip là đối tác tin cậy của hàng ngàn khách hàng.</p>
+
+                <div class="row g-4">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center border-start border-5 border-primary px-3">
+                            <h1 class="flex-shrink-0 display-5 text-primary mb-0 fw-bold" data-toggle="counter-up">15</h1>
+                            <div class="ps-4">
+                                <p class="mb-0">Năm</p>
+                                <h6 class="text-uppercase mb-0">Kinh nghiệm</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center border-start border-5 border-primary px-3">
+                            <h1 class="flex-shrink-0 display-5 text-primary mb-0 fw-bold" data-toggle="counter-up">1200+</h1>
+                            <div class="ps-4">
+                                <p class="mb-0">Đơn hàng</p>
+                                <h6 class="text-uppercase mb-0">Hoàn thành</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="row g-4 align-items-center">
+                    <div class="col-6">
+                        <img class="img-fluid rounded shadow-sm" src="https://images.unsplash.com/photo-1566576912902-70433054db69?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80" alt="">
+                    </div>
+                    <div class="col-6">
+                        <img class="img-fluid rounded shadow-sm" src="https://images.unsplash.com/photo-1580674684081-7617fbf3d745?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80" alt="">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-fluid bg-light py-5">
+    <div class="container py-5">
+        <div class="text-center wow fadeInUp" data-wow-delay="0.1s">
+            <h6 class="text-secondary text-uppercase text-center" style="letter-spacing: 1px;">Dịch Vụ Của Chúng Tôi</h6>
+            <h1 class="mb-5 fw-bold text-primary">Khám Phá Các Giải Pháp</h1>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.3s">
+                <div class="service-item bg-white p-5 h-100 rounded-4 shadow-sm text-center border-bottom border-5 border-primary">
+                    <div class="service-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 65px; height: 65px;">
+                        <i class="fa fa-shipping-fast fa-2x"></i>
+                    </div>
+                    <h4 class="mb-3 fw-bold">Giao Hàng Nhanh</h4>
+                    <p class="text-muted">Dịch vụ giao hàng hỏa tốc trong nội thành và liên tỉnh với thời gian tối ưu nhất.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.5s">
+                <div class="service-item bg-white p-5 h-100 rounded-4 shadow-sm text-center border-bottom border-5 border-primary">
+                    <div class="service-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 65px; height: 65px;">
+                        <i class="fa fa-box-open fa-2x"></i>
+                    </div>
+                    <h4 class="mb-3 fw-bold">Bảo Đảm Hàng Hóa</h4>
+                    <p class="text-muted">Cam kết bảo hiểm hàng hóa 100%, đền bù thỏa đáng nếu xảy ra hư hỏng, mất mát.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.7s">
+                <div class="service-item bg-white p-5 h-100 rounded-4 shadow-sm text-center border-bottom border-5 border-primary">
+                    <div class="service-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 65px; height: 65px;">
+                        <i class="fa fa-headset fa-2x"></i>
+                    </div>
+                    <h4 class="mb-3 fw-bold">Hỗ Trợ 24/7</h4>
+                    <p class="text-muted">Đội ngũ CSKH chuyên nghiệp luôn sẵn sàng giải đáp mọi thắc mắc của bạn bất cứ lúc nào.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-fluid py-5">
+    <div class="container">
+        <div class="bg-primary rounded-4 p-5 wow fadeInUp" data-wow-delay="0.1s">
+            <div class="row g-5 align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="text-white mb-3 fw-bold">Bạn đã sẵn sàng gửi hàng?</h1>
+                    <p class="text-white mb-0 fs-5">Đăng ký ngay tài khoản để tạo đơn hàng và quản lý vận chuyển dễ dàng hơn bao giờ hết.</p>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    @if (!User.Identity!.IsAuthenticated)
+                    {
+                        <a class="btn btn-dark rounded-pill py-3 px-5 fw-bold shadow-lg" asp-controller="Auth" asp-action="Register">
+                            <i class="fa-solid fa-user-plus me-2"></i>Đăng ký ngay
+                        </a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-light rounded-pill py-3 px-5 fw-bold shadow-lg text-primary" asp-controller="Order" asp-action="Create">
+                            <i class="fa-solid fa-plus me-2"></i>Tạo đơn hàng
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <style>
+        .service-item:hover {
+            transform: translateY(-5px);
+            transition: .5s;
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        }
+
+        .hero-header {
+            background-attachment: fixed; /* Tạo hiệu ứng parallax nhẹ */
+        }
+    </style>
+}

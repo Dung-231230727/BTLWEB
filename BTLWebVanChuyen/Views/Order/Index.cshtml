@@ -9,114 +9,133 @@
     var shippers = ViewBag.Shippers as List<Employee> ?? new List<Employee>();
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <div>
+        <h6 class="text-primary text-uppercase mb-1" style="letter-spacing: 1px;">Quản lý vận chuyển</h6>
+        <h2 class="text-dark fw-bold m-0"><i class="fa-solid fa-boxes-stacked me-2 text-primary"></i> @ViewData["Title"]</h2>
+    </div>
 
-@if (User.IsInRole("Customer"))
-{
-    <p>
-        <a class="btn btn-success" asp-action="Create">Tạo đơn hàng mới</a>
-    </p>
-}
+    @if (User.IsInRole("Customer"))
+    {
+        <a class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-top" asp-action="Create">
+            <i class="fa-solid fa-plus me-2"></i>Tạo đơn hàng mới
+        </a>
+    }
+</div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Khách hàng</th>
-            <th>Nhân viên điều phối</th>
-            <th>Nhân viên giao hàng</th>
-            <th>Khu vực lấy</th>
-            <th>Khu vực giao</th>
-            <th>Trạng thái</th>
-            <th>Ngày tạo</th>
-            <th>Hành động</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var order in Model)
-        {
-            <tr>
-                <td>@order.Customer?.User?.FullName</td>
-                <td class="dispatcher-name">@order.Dispatcher?.User?.FullName</td>
-                <td>@order.Shipper?.User?.FullName</td>
-                <td>@order.PickupArea.AreaName</td>
-                <td>@order.DeliveryArea.AreaName</td>
-                <td>@order.Status.GetDisplayName()</td>
-                <td>@order.CreatedAt.ToString("dd/MM/yyyy")</td>
-                <td>
-                    <a class="btn btn-sm btn-info" asp-action="Details" asp-route-id="@order.Id">Xem</a>
-
-                    @* Admin + Dispatcher có quyền Edit *@
-                    @if (User.IsInRole("Admin") || User.IsInRole("Dispatcher"))
+<div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="py-4 ps-4 text-secondary text-uppercase font-weight-bold small border-0">Khách hàng</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Điều phối viên</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Shipper</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Điểm lấy</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Điểm giao</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Trạng thái</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Ngày tạo</th>
+                        <th class="py-4 pe-4 text-center text-secondary text-uppercase font-weight-bold small border-0" style="width: 180px;">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model)
                     {
-                        <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@order.Id">Sửa</a>
-                    }
+                        <tr class="border-bottom">
+                            <td class="ps-4 py-3 fw-bold text-dark">@order.Customer?.User?.FullName</td>
+                            <td class="dispatcher-name text-muted">@(order.Dispatcher?.User?.FullName ?? "---")</td>
+                            <td class="text-muted">@(order.Shipper?.User?.FullName ?? "---")</td>
+                            <td class="text-muted">@order.PickupArea.AreaName</td>
+                            <td class="text-muted">@order.DeliveryArea.AreaName</td>
+                            <td>
+                                @* Badge trạng thái *@
+                                <span class="badge bg-info bg-opacity-10 text-dark border border-info rounded-pill px-3">
+                                    @order.Status.GetDisplayName()
+                                </span>
+                            </td>
+                            <td class="text-muted">@order.CreatedAt.ToString("dd/MM/yyyy")</td>
+                            <td class="pe-4 py-3">
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="btn-group shadow-sm w-100" role="group">
+                                        <a class="btn btn-light text-primary btn-sm" asp-action="Details" asp-route-id="@order.Id" title="Xem">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </a>
 
-                    @* Admin có quyền Delete *@
-                    @if (User.IsInRole("Admin"))
-                    {
-                        <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@order.Id">Xóa</a>
-                    }
+                                        @if (User.IsInRole("Admin") || User.IsInRole("Dispatcher"))
+                                        {
+                                            <a class="btn btn-light text-warning btn-sm" asp-action="Edit" asp-route-id="@order.Id" title="Sửa">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </a>
+                                        }
 
-                    @* Dispatcher: Gán Shipper và cập nhật trạng thái (chỉ thấy khi là Dispatcher) *@
-                    @if (User.IsInRole("Dispatcher"))
-                    {
-                        <form asp-action="Assign" method="post" class="form-inline mt-1 assign-form">
-                            <input type="hidden" name="orderId" value="@order.Id" />
-                            <select name="shipperId" class="form-control form-control-sm">
-                                <option value="">-- Chọn Shipper --</option>
-                                @foreach (var shipper in shippers)
-                                {
-                                    var selected = order.ShipperId == shipper.Id ? "selected" : "";
-                                    <option value="@shipper.Id" selected="@(selected)">@shipper.User?.FullName</option>
-                                }
-                            </select>
-                            <button type="button" class="btn btn-sm btn-primary ml-1 btn-assign">Gán</button>
-                        </form>
-                        @*Chỉ cập nhật khi đơn hàng ở trạng thái Failed*@
-                        @if (order.Status == OrderStatus.Failed)
-                        {
-                            <form asp-action="UpdateStatus" method="post" class="form-inline mt-1 cancel-form">
-                                <input type="hidden" name="orderId" value="@order.Id" />
-                                <select name="status" class="form-control form-control-sm">
-                                    <option value="@OrderStatus.Cancelled">
-                                        @OrderStatus.Cancelled.GetDisplayName()
-                                    </option>
-                                </select>
-                                <button type="button" class="btn btn-sm btn-danger ml-1 btn-cancel">Cập nhật</button>
-                            </form>
-                        }
-                    }
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <a class="btn btn-light text-danger btn-sm" asp-action="Delete" asp-route-id="@order.Id" title="Xóa">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </a>
+                                        }
+                                    </div>
 
-                    @* Shipper: Cập nhật trạng thái (chỉ thấy khi là Shipper) *@
-                    @if (User.IsInRole("Shipper"))
-                    {
-                        <form asp-action="UpdateStatus" method="post" class="form-inline mt-1 shipper-form">
-                            <input type="hidden" name="orderId" value="@order.Id" />
-                            <select name="status" class="form-control form-control-sm">
-                                @foreach (var status in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
-                                {
-                                    // Chỉ cho phép 3 trạng thái shipper
-                                    if (status == OrderStatus.Delivering || status == OrderStatus.Delivered || status == OrderStatus.Failed)
+                                    @* Dispatcher Logic *@
+                                    @if (User.IsInRole("Dispatcher"))
                                     {
-                                        var selected = order.Status == status ? "selected" : "";
-                                        <option value="@status" selected="@(selected)">
-                                            @status.GetDisplayName()
-                                        </option>
+                                        <div class="bg-light p-2 rounded-3 border">
+                                            <form asp-action="Assign" method="post" class="d-flex gap-1 assign-form mb-1">
+                                                <input type="hidden" name="orderId" value="@order.Id" />
+                                                <select name="shipperId" class="form-select form-select-sm border-0">
+                                                    <option value="">-- Shipper --</option>
+                                                    @foreach (var shipper in shippers)
+                                                    {
+                                                        var selected = order.ShipperId == shipper.Id ? "selected" : "";
+                                                        <option value="@shipper.Id" selected="@(selected)">@shipper.User?.FullName</option>
+                                                    }
+                                                </select>
+                                                <button type="button" class="btn btn-primary btn-sm btn-assign"><i class="fa-solid fa-check"></i></button>
+                                            </form>
+                                            @if (order.Status == OrderStatus.Failed)
+                                            {
+                                                <form asp-action="UpdateStatus" method="post" class="d-flex gap-1 cancel-form">
+                                                    <input type="hidden" name="orderId" value="@order.Id" />
+                                                    <select name="status" class="form-select form-select-sm border-0">
+                                                        <option value="@OrderStatus.Cancelled">@OrderStatus.Cancelled.GetDisplayName()</option>
+                                                    </select>
+                                                    <button type="button" class="btn btn-danger btn-sm btn-cancel"><i class="fa-solid fa-xmark"></i></button>
+                                                </form>
+                                            }
+                                        </div>
                                     }
-                                }
-                            </select>
-                            <button type="submit" class="btn btn-sm btn-success ml-1">Cập nhật</button>
-                        </form>
+
+                                    @* Shipper Logic *@
+                                    @if (User.IsInRole("Shipper"))
+                                    {
+                                        <form asp-action="UpdateStatus" method="post" class="d-flex gap-1 shipper-form mt-1">
+                                            <input type="hidden" name="orderId" value="@order.Id" />
+                                            <select name="status" class="form-select form-select-sm bg-light border-0">
+                                                @foreach (var status in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
+                                                {
+                                                    if (status == OrderStatus.Delivering || status == OrderStatus.Delivered || status == OrderStatus.Failed)
+                                                    {
+                                                        var selected = order.Status == status ? "selected" : "";
+                                                        <option value="@status" selected="@(selected)">@status.GetDisplayName()</option>
+                                                    }
+                                                }
+                                            </select>
+                                            <button type="submit" class="btn btn-success btn-sm rounded"><i class="fa-solid fa-floppy-disk"></i></button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
                     }
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
-        // Hàm chung cập nhật trạng thái Ajax
         function updateOrderStatus(orderId, status, callback) {
             var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
             fetch('@Url.Action("UpdateStatus")', {
@@ -132,9 +151,8 @@
             .catch(err => console.error(err));
         }
 
-        // Dispatcher gán shipper
         document.querySelectorAll('.btn-assign').forEach(btn => {
-            btn.type = "button"; // tránh submit
+            btn.type = "button";
             btn.addEventListener('click', function() {
                 var form = this.closest('.assign-form');
                 var orderId = form.querySelector('input[name="orderId"]').value;
@@ -152,12 +170,9 @@
                 .then(res => res.json())
                 .then(data => {
                     var row = form.closest('tr');
-
                     var dispatcherSpan = row.querySelector('.dispatcher-name');
                     if(dispatcherSpan) dispatcherSpan.textContent = data.dispatcherName;
-
-                    row.querySelector('td:nth-child(6)').textContent = data.statusDisplay;
-
+                    row.querySelector('td:nth-child(6) span').textContent = data.statusDisplay; // Updated selector for badge
                     var cancelForm = row.querySelector('.cancel-form');
                     if(cancelForm) cancelForm.style.display = 'none';
                 })
@@ -165,7 +180,6 @@
             });
         });
 
-        // Dispatcher cập nhật trạng thái Cancelled
         document.querySelectorAll('.btn-cancel').forEach(btn => {
             btn.type = "button";
             btn.addEventListener('click', function() {
@@ -175,31 +189,27 @@
 
                 updateOrderStatus(orderId, status, function(data) {
                     var row = form.closest('tr');
-                    row.querySelector('td:nth-child(6)').textContent = data.statusDisplay;
+                    row.querySelector('td:nth-child(6) span').textContent = data.statusDisplay; // Updated selector for badge
                     var dispatcherSpan = row.querySelector('.dispatcher-name');
                     if(dispatcherSpan) dispatcherSpan.textContent = data.dispatcherName;
                 });
             });
         });
 
-        // Shipper cập nhật trạng thái
         document.querySelectorAll('.shipper-form').forEach(form => {
             var btn = form.querySelector('button.btn-success');
             if(btn) {
-                btn.type = "button"; // tránh submit form
+                btn.type = "button";
                 btn.addEventListener('click', function() {
                     var orderId = form.querySelector('input[name="orderId"]').value;
                     var status = form.querySelector('select[name="status"]').value;
 
                     updateOrderStatus(orderId, status, function(data) {
                         var row = form.closest('tr');
-                        row.querySelector('td:nth-child(6)').textContent = data.statusDisplay;
+                        row.querySelector('td:nth-child(6) span').textContent = data.statusDisplay; // Updated selector for badge
                     });
                 });
             }
         });
     </script>
 }
-
-
-

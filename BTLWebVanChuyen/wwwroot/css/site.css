@@ -1,22 +1,130 @@
+/* ========================================================================= */
+/* 1. Ð?NH NGH?A BI?N MÀU S?C VÀ FONT (THEME PASTEL & HI?N Ð?I) */
+/* ========================================================================= */
+:root {
+    /* Màu Ch? Ð?o (Primary): Xanh Pastel Nh?t - cho các CTA, link chính */
+    --color-primary: #66D9EF; /* Light Cyan */
+    --color-primary-dark: #37B3C3; /* Dùng cho hover/active */
+    /* Màu Nh?n (Accent): H?ng Pastel Nh?t - cho highlight, thông báo, icon */
+    --color-accent: #FFB8D9; /* Light Pink */
+    /* Màu N?n/Tr?ng: N?n s?ch s?, nhi?u kho?ng tr?ng */
+    --color-background: #F8F9FA; /* R?t nh?t, g?n tr?ng */
+    --color-white: #FFFFFF;
+    /* Màu Ch?: Ð?m b?o d? ð?c trên n?n sáng */
+    --color-text: #343A40; /* Ðen g?n */
+    --color-text-muted: #6C757D; /* Xám cho các ghi chú nh? */
+    /* Màu cho Dashboard (N?n Sidebar, tiêu ð? Card) */
+    --color-dashboard-bg: #EAECEE;
+    /* Font ch? hi?n ð?i, Sans-serif, d? ð?c */
+    --font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
+    /* Shadow/Bóng ð? nh? */
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* ========================================================================= */
+/* 2. THI?T L?P CHUNG */
+/* ========================================================================= */
 html {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+    html {
+        font-size: 16px;
+    }
 }
 
 body {
-  margin-bottom: 60px;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-family);
+    min-height: 100vh;
+}
+
+.box-shadow {
+    box-shadow: var(--box-shadow);
+}
+
+/* ========================================================================= */
+/* 3. ÐI?U CH?NH THÀNH PH?N BOOTSTRAP */
+/* ========================================================================= */
+
+/* Màu cho các th? (Card) */
+.card, .p-5.text-center.bg-white {
+    border: none;
+    border-radius: 12px;
+    box-shadow: var(--box-shadow);
+}
+
+/* Nút b?m (Buttons) */
+.btn-primary, .btn-info {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    transition: background-color 0.3s ease;
+}
+
+    .btn-primary:hover, .btn-info:hover {
+        background-color: var(--color-primary-dark);
+        border-color: var(--color-primary-dark);
+    }
+
+/* Liên k?t (Links) */
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+    a:hover {
+        color: var(--color-primary-dark);
+    }
+
+/* Input Fields (Form Controls) */
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+}
+
+    .form-control:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 0.25rem rgba(102, 217, 239, 0.25); /* Primary Pastel Light Shadow */
+    }
+
+/* B?ng d? li?u (Tables) */
+.table {
+    --bs-table-bg: var(--color-white);
+}
+
+.table-hover > tbody > tr:hover {
+    --bs-table-bg-hover: var(--color-dashboard-bg); /* Hover màu xám nh?t */
+}
+
+.table thead th {
+    background-color: var(--color-dashboard-bg); /* Header B?ng màu xám pastel */
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+/* Badges (Tags tr?ng thái) */
+.badge {
+    padding: 0.5em 0.8em;
+    border-radius: 50rem; /* Bo tr?n hoàn toàn */
+    font-weight: 500;
+}
+
+/* ========================================================================= */
+/* 4. TÙY CH?NH CHUNG CHO CÁC KHU V?C */
+/* ========================================================================= */
+
+/* Header (Navbar) */
+.navbar-light {
+    background-color: var(--color-white) !important;
+    border-bottom: 1px solid var(--color-dashboard-bg) !important;
+}
+
+/* Footer */
+.footer {
+    background-color: var(--color-white) !important;
+    border-top: 1px solid var(--color-dashboard-bg) !important;
+    padding: 1rem 0;
 }

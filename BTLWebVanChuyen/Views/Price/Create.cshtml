@@ -4,39 +4,73 @@
     ViewData["Title"] = "Thêm cước phí mới";
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-0 text-center">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                    <i class="fa-solid fa-file-invoice-dollar fa-2x text-success"></i>
+                </div>
+                <h3 class="fw-bold text-dark">@ViewData["Title"]</h3>
+                <p class="text-muted">Thiết lập bảng giá cho khu vực vận chuyển</p>
+            </div>
 
-<form asp-action="Create" method="post">
-    <div class="mb-3">
-        <label class="form-label">Khu vực</label>
-        <select asp-for="AreaId" asp-items="@(new SelectList(ViewBag.Areas, "AreaId", "AreaName"))" class="form-control">
-            <option value="">-- Chọn khu vực --</option>
-        </select>
-        <span asp-validation-for="AreaId" class="text-danger"></span>
+            <div class="card-body p-4 pt-2">
+                <form asp-action="Create" method="post">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Khu vực áp dụng</label>
+                        <select asp-for="AreaId" asp-items="@(new SelectList(ViewBag.Areas, "AreaId", "AreaName"))" class="form-select bg-light border-0" style="height: 50px;">
+                            <option value="">-- Chọn khu vực --</option>
+                        </select>
+                        <span asp-validation-for="AreaId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Giá mở cửa (Cơ bản)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-money-bill text-muted"></i></span>
+                                <input asp-for="BasePrice" class="form-control bg-light border-start-0" placeholder="0" />
+                                <span class="input-group-text bg-light border-start-0 fw-bold text-secondary">VNĐ</span>
+                            </div>
+                            <span asp-validation-for="BasePrice" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Giá cước / km</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-road text-muted"></i></span>
+                                <input asp-for="PricePerKm" class="form-control bg-light border-start-0" placeholder="0" />
+                                <span class="input-group-text bg-light border-start-0 text-muted">/km</span>
+                            </div>
+                            <span asp-validation-for="PricePerKm" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Giá cước / kg</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-weight-hanging text-muted"></i></span>
+                                <input asp-for="WeightPrice" class="form-control bg-light border-start-0" placeholder="0" />
+                                <span class="input-group-text bg-light border-start-0 text-muted">/kg</span>
+                            </div>
+                            <span asp-validation-for="WeightPrice" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary py-3 rounded-pill fw-bold shadow-sm hover-top">
+                            <i class="fa-solid fa-check me-2"></i>Lưu bảng giá
+                        </button>
+                        <a asp-action="Index" class="btn btn-light py-3 rounded-pill fw-bold text-secondary">Quay lại</a>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-
-    <div class="mb-3">
-        <label class="form-label">Giá cơ bản</label>
-        <input asp-for="BasePrice" class="form-control" />
-        <span asp-validation-for="BasePrice" class="text-danger"></span>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Giá/km</label>
-        <input asp-for="PricePerKm" class="form-control" />
-        <span asp-validation-for="PricePerKm" class="text-danger"></span>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Giá/kg</label>
-        <input asp-for="WeightPrice" class="form-control" />
-        <span asp-validation-for="WeightPrice" class="text-danger"></span>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Lưu</button>
-    <a asp-action="Index" class="btn btn-secondary">Hủy</a>
-</form>
+</div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

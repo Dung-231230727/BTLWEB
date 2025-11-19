@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace BTLWebVanChuyen.Models
 {
@@ -31,6 +31,10 @@ namespace BTLWebVanChuyen.Models
 
         // Details
         public string TrackingCode { get; set; } = string.Empty;
+        [Required]
+        public string ReceiverName { get; set; } = string.Empty;   // Người nhận
+        [Required]
+        public string ReceiverPhone { get; set; } = string.Empty;  // SĐT người nhận
         [Required]
         public string PickupAddress { get; set; } = string.Empty;
         [Required]

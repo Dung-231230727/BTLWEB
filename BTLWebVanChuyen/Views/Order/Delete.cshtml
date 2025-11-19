@@ -1,34 +1,41 @@
 ﻿@model BTLWebVanChuyen.Models.Order
+@using BTLWebVanChuyen.Utility
 @{
     ViewData["Title"] = "Xóa đơn hàng";
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="text-center mb-4">
+            <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                <i class="fa-solid fa-trash-can fa-3x text-danger"></i>
+            </div>
+            <h3 class="fw-bold text-dark">Xóa Đơn Hàng?</h3>
+            <p class="text-muted">Bạn có chắc chắn muốn xóa đơn hàng này vĩnh viễn? Hành động này không thể hoàn tác.</p>
+        </div>
 
-<h4>Bạn có chắc chắn muốn xóa đơn hàng này?</h4>
+        <div class="card shadow-lg border-0 rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h5 class="text-center text-uppercase text-secondary fw-bold mb-4">Thông tin đơn hàng</h5>
+                <dl class="row g-2">
+                    <dt class="col-sm-4 text-secondary small text-uppercase">Khách hàng</dt>
+                    <dd class="col-sm-8 fw-bold">@Model.Customer?.User?.FullName</dd>
 
-<dl class="row">
-    <dt class="col-sm-3">Khách hàng</dt>
-    <dd class="col-sm-9">@Model.Customer?.User?.FullName</dd>
+                    <dt class="col-sm-4 text-secondary small text-uppercase">Mã vận đơn</dt>
+                    <dd class="col-sm-8 fw-bold text-primary">@Model.TrackingCode</dd>
 
-    <dt class="col-sm-3">Dispatcher</dt>
-    <dd class="col-sm-9">@Model.Dispatcher?.User?.FullName</dd>
+                    <dt class="col-sm-4 text-secondary small text-uppercase">Trạng thái</dt>
+                    <dd class="col-sm-8"><span class="badge bg-secondary rounded-pill">@Model.Status.GetDisplayName()</span></dd>
+                </dl>
+            </div>
+        </div>
 
-    <dt class="col-sm-3">Shipper</dt>
-    <dd class="col-sm-9">@Model.Shipper?.User?.FullName</dd>
-
-    <dt class="col-sm-3">Pickup Area</dt>
-    <dd class="col-sm-9">@Model.PickupArea.AreaName</dd>
-
-    <dt class="col-sm-3">Delivery Area</dt>
-    <dd class="col-sm-9">@Model.DeliveryArea.AreaName</dd>
-
-    <dt class="col-sm-3">Trạng thái</dt>
-    <dd class="col-sm-9">@Model.Status</dd>
-</dl>
-
-<form asp-action="DeleteConfirmed" method="post">
-    <input type="hidden" asp-for="Id" />
-    <button type="submit" class="btn btn-danger">Xóa</button>
-    <a asp-action="Index" class="btn btn-secondary">Hủy</a>
-</form>
+        <div class="d-flex gap-3">
+            <form asp-action="DeleteConfirmed" method="post" class="flex-grow-1">
+                <input type="hidden" asp-for="Id" />
+                <button type="submit" class="btn btn-danger w-100 py-3 fw-bold rounded-pill shadow-sm hover-top">Xác nhận Xóa</button>
+            </form>
+            <a asp-action="Index" class="btn btn-light w-100 py-3 fw-bold rounded-pill text-secondary hover-top">Hủy bỏ</a>
+        </div>
+    </div>
+</div>

@@ -5,99 +5,89 @@
     var shippers = ViewBag.Shippers as List<BTLWebVanChuyen.Models.Employee> ?? new List<BTLWebVanChuyen.Models.Employee>();
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="row justify-content-center mt-4">
+    <div class="col-md-10 col-lg-8">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-primary text-white p-4 rounded-top-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0 fw-bold"><i class="fa-solid fa-circle-info me-2"></i> @ViewData["Title"]</h4>
+                    <small class="opacity-75">Mã vận đơn: #@Model.TrackingCode</small>
+                </div>
+                <span class="badge bg-white text-primary fs-6 rounded-pill px-3 py-2">@Model.Status.GetDisplayName()</span>
+            </div>
 
-<dl class="row">
-    <dt class="col-sm-3">Mã vận đơn</dt>
-    <dd class="col-sm-9">@Model.TrackingCode</dd>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="text-uppercase text-primary fw-bold mb-3 border-bottom pb-2">Thông tin chung</h6>
+                        <dl class="row g-2">
+                            <dt class="col-sm-5 text-secondary small text-uppercase">Người gửi</dt>
+                            <dd class="col-sm-7 fw-bold">@Model.Customer?.User?.FullName</dd>
 
-    <dt class="col-sm-3">Khách hàng</dt>
-    <dd class="col-sm-9">@Model.Customer?.User?.FullName</dd>
+                            <dt class="col-sm-5 text-secondary small text-uppercase">Người nhận</dt>
+                            <dd class="col-sm-7 fw-bold">@Model.ReceiverName</dd>
 
-    <dt class="col-sm-3">Dispatcher</dt>
-    <dd class="col-sm-9">@Model.Dispatcher?.User?.FullName</dd>
+                            <dt class="col-sm-5 text-secondary small text-uppercase">SĐT người nhận</dt>
+                            <dd class="col-sm-7 fw-bold">@Model.ReceiverPhone</dd>
 
-    <dt class="col-sm-3">Shipper</dt>
-    <dd class="col-sm-9">@Model.Shipper?.User?.FullName</dd>
+                            <dt class="col-sm-5 text-secondary small text-uppercase">Dispatcher</dt>
+                            <dd class="col-sm-7">@(Model.Dispatcher?.User?.FullName ?? "Chưa gán")</dd>
 
-    <dt class="col-sm-3">Khu vực lấy</dt>
-    <dd class="col-sm-9">@Model.PickupArea.AreaName</dd>
+                            <dt class="col-sm-5 text-secondary small text-uppercase">Shipper</dt>
+                            <dd class="col-sm-7">@(Model.Shipper?.User?.FullName ?? "Chưa gán")</dd>
 
-    <dt class="col-sm-3">Khu vực giao</dt>
-    <dd class="col-sm-9">@Model.DeliveryArea.AreaName</dd>
+                            <dt class="col-sm-5 text-secondary small text-uppercase">Ngày tạo</dt>
+                            <dd class="col-sm-7">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-uppercase text-primary fw-bold mb-3 border-bottom pb-2">Hành trình & Chi phí</h6>
+                        <dl class="row g-2">
+                            <dt class="col-sm-5 text-secondary small text-uppercase">Điểm lấy</dt>
+                            <dd class="col-sm-7">@Model.PickupArea.AreaName <br /><span class="text-muted small">(@Model.PickupAddress)</span></dd>
 
-    <dt class="col-sm-3">Địa chỉ lấy</dt>
-    <dd class="col-sm-9">@Model.PickupAddress</dd>
+                            <dt class="col-sm-5 text-secondary small text-uppercase">Điểm giao</dt>
+                            <dd class="col-sm-7">@Model.DeliveryArea.AreaName <br /><span class="text-muted small">(@Model.DeliveryAddress)</span></dd>
 
-    <dt class="col-sm-3">Địa chỉ giao</dt>
-    <dd class="col-sm-9">@Model.DeliveryAddress</dd>
+                            <dt class="col-sm-5 text-secondary small text-uppercase">Tổng phí</dt>
+                            <dd class="col-sm-7 fs-5 text-success fw-bold">@Model.TotalPrice.ToString("N0") đ</dd>
+                        </dl>
+                    </div>
+                </div>
 
-    <dt class="col-sm-3">Khoảng cách (km)</dt>
-    <dd class="col-sm-9">@Model.DistanceKm</dd>
-
-    <dt class="col-sm-3">Trọng lượng (kg)</dt>
-    <dd class="col-sm-9">@Model.WeightKg</dd>
-
-    <dt class="col-sm-3">Tổng tiền</dt>
-    <dd class="col-sm-9">@Model.TotalPrice</dd>
-
-    <dt class="col-sm-3">Trạng thái</dt>
-    <dd class="col-sm-9">@Model.Status.GetDisplayName()</dd>
-
-    <dt class="col-sm-3">Ngày tạo</dt>
-    <dd class="col-sm-9">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
-</dl>
-
-<hr />
-
-@* Dispatcher: gán Shipper *@
-@if (User.IsInRole("Dispatcher"))
-{
-    <h4>Gán Shipper</h4>
-    <form asp-action="Assign" method="post">
-        <input type="hidden" name="orderId" value="@Model.Id" />
-        <select name="shipperId" class="form-control">
-            <option value="">-- Chọn Shipper --</option>
-            @if (shippers != null)
-            {
-                foreach (var shipper in shippers)
+                @if (User.IsInRole("Shipper"))
                 {
-                    var selected = Model.ShipperId == shipper.Id ? "selected" : "";
-                    <option value="@shipper.Id" selected="@selected">@shipper.User?.FullName</option>
+                    <div class="bg-light p-4 rounded-4 mt-4 border">
+                        <h5 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-truck-fast me-2 text-primary"></i> Cập nhật trạng thái</h5>
+                        <form asp-action="UpdateStatus" method="post" class="d-flex gap-3">
+                            <input type="hidden" name="orderId" value="@Model.Id" />
+                            <select name="status" class="form-select bg-white border-secondary">
+                                @foreach (var status in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
+                                {
+                                    if (status == OrderStatus.Delivering || status == OrderStatus.Delivered || status == OrderStatus.Failed)
+                                    {
+                                        var selected = Model.Status == status ? "selected" : "";
+                                        <option value="@status" selected="@(selected)">@status.GetDisplayName()</option>
+                                    }
+                                }
+                            </select>
+                            <button type="submit" class="btn btn-success fw-bold px-4 rounded-pill">Cập nhật</button>
+                        </form>
+                    </div>
                 }
-            }
-        </select>
-        <button type="submit" class="btn btn-primary mt-2">Gán</button>
-    </form>
-}
+            </div>
 
-@* Shipper: cập nhật trạng thái *@
-@if (User.IsInRole("Shipper"))
-{
-    <h4>Cập nhật trạng thái</h4>
-    <form asp-action="UpdateStatus" method="post">
-        <input type="hidden" name="orderId" value="@Model.Id" />
-        <select name="status" class="form-control">
-            @foreach (var status in Enum.GetValues(typeof(OrderStatus)))
-            {
-                // Ép kiểu giá trị loop sang enum
-                var enumStatus = (OrderStatus)status;
-
-                // Logic 'selected': So sánh trạng thái hiện tại với trạng thái trong loop
-                var selected = Model.Status == enumStatus ? "selected" : "";
-
-                // Hiển thị tên đã định nghĩa bằng GetDisplayName()
-                <option value="@status" selected="@(selected)">
-                    @enumStatus.GetDisplayName() @* <--- ĐÃ SỬA VỊ TRÍ NÀY *@
-                </option>
-            }
-        </select>
-        <button type="submit" class="btn btn-success mt-2">Cập nhật</button>
-    </form>
-}
-
-@{
-    var backAction = User.IsInRole("Customer") ? "MyOrders" : "Index";
-}
-<a asp-action="@backAction" class="btn btn-secondary mt-3">Quay lại</a>
-
+            <div class="card-footer bg-light p-3 text-center rounded-bottom-4">
+                @{
+                    string backController = "Order";
+                    string backAction = "Index";
+                    if (!User.Identity!.IsAuthenticated) { backController = "Home"; backAction = "Index"; }
+                    else if (User.IsInRole("Customer")) { backController = "Order"; backAction = "MyOrders"; }
+                }
+                <a asp-controller="@backController" asp-action="@backAction" class="btn btn-outline-secondary rounded-pill px-4 fw-bold hover-top">
+                    <i class="fa-solid fa-arrow-left me-2"></i>Quay lại
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

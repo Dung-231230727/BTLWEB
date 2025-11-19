@@ -1,94 +1,228 @@
-﻿@{
-    // Defensive check to avoid CS8602: Dereference of a possibly null reference.
-    var isAuthenticated = User?.Identity?.IsAuthenticated ?? false;
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<BTLWebVanChuyen.Models.ApplicationUser> SignInManager
+
+@{
+    // LOGIC GỐC: GIỮ NGUYÊN
+    var isAuthenticated = SignInManager.IsSignedIn(User);
     var userName = User?.Identity?.Name ?? "";
+    var title = ViewData["Title"]?.ToString() ?? "BTLWebVanChuyen";
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - BTLWebVanChuyen</title>
+    <title>@title - Dịch vụ Vận Chuyển</title>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/BTLWebVanChuyen.styles.css" asp-append-version="true" />
+
+    <style>
+        /* Tùy chỉnh đè lên site.css để khớp với template FASTER */
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            padding: 15px 10px;
+        }
+
+        .topbar {
+            background-color: #212529;
+            color: #f8f9fa;
+            font-size: 0.85rem;
+        }
+        /* Màu Dark của Template */
+    </style>
 </head>
 <body>
+    <div class="container-fluid topbar py-2 px-lg-5 d-none d-lg-block">
+        <div class="row">
+            <div class="col-md-6 text-center text-lg-start mb-2 mb-lg-0">
+                <div class="d-inline-flex align-items-center">
+                    <small class="me-3"><i class="fa fa-phone-alt me-2"></i>+84 123 456 789</small>
+                    <small class="me-3"><i class="fa fa-envelope me-2"></i>lienhe@vanchuyen.com</small>
+                </div>
+            </div>
+            <div class="col-md-6 text-center text-lg-end">
+                <div class="d-inline-flex align-items-center">
+                    <a class="text-white px-2" href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a class="text-white px-2" href="#"><i class="fab fa-twitter"></i></a>
+                    <a class="text-white px-2" href="#"><i class="fab fa-linkedin-in"></i></a>
+                    <a class="text-white px-2" href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3 px-lg-5 sticky-top">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">BTLWebVanChuyen</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                @* LOGO *@
+                <a class="navbar-brand fs-2 text-primary" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="fa-solid fa-truck-fast me-2"></i>FASTER<span class="text-dark">SHIP</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        @if (isAuthenticated)
+
+                <div class="collapse navbar-collapse" id="navbarCollapse">
+                    @* LEFT SIDE MENU - Menu Chính *@
+                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0 py-0">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark active" asp-area="" asp-controller="Home" asp-action="Index">Trang chủ</a>
+                        </li>
+
+                        @* LOGIC GỐC: KHÔNG THAY ĐỔI *@
+                        @if (User!.IsInRole("Admin") || User.IsInRole("Dispatcher"))
                         {
                             <li class="nav-item">
-                                <span class="nav-link">Hi, @userName</span>
+                                <a class="nav-link text-dark" asp-controller="Order" asp-action="Index">Quản lý Đơn</a>
                             </li>
 
-                            <!-- MENU CHO KHÁCH HÀNG -->
-                            @if (User?.IsInRole("Customer") ?? false)
+                            @if (User.IsInRole("Admin"))
                             {
-                                <li class="nav-item"><a class="nav-link" href="/Order/Create">Tạo đơn hàng</a></li>
-                                <li class="nav-item"><a class="nav-link" href="/Order/MyOrders">Đơn hàng của tôi</a></li>
-                                <li class="nav-item"><a class="nav-link" href="/Order/Tracking">Tra cứu đơn hàng</a></li>
-                            }
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle text-dark" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">Admin</a>
+                                    <ul class="dropdown-menu shadow-sm border-0 m-0">
+                                        <li><a class="dropdown-item" asp-controller="Employee" asp-action="Index">Nhân viên</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Customer" asp-action="Index">Khách hàng</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Area" asp-action="Index">Khu vực</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Price" asp-action="Index">Bảng giá</a></li>
+                                    </ul>
+                                </li>
 
-                            <!-- MENU CHO ADMIN -->
-                            @if (User?.IsInRole("Admin") ?? false)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="/Employee">Quản lý nhân viên</a></li>
-                                <li class="nav-item"><a class="nav-link" href="/Customer">Quản lý khách hàng</a></li>
-                                <li class="nav-item"><a class="nav-link" href="/Area">Quản lý Khu vực</a></li>
-                                <li class="nav-item"><a class="nav-link" href="/Price">Quản lý cước phí</a></li>
-                                <li class="nav-item"><a class="nav-link" href="/Order">Quản lý đơn hàng</a></li>
-                                <li class="nav-item"><a class="nav-link" href="/Report/DailyReport">Báo cáo & Thống kê</a></li>
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle text-dark" href="#" id="reportDropdown" role="button" data-bs-toggle="dropdown">Báo cáo</a>
+                                    <ul class="dropdown-menu shadow-sm border-0 m-0">
+                                        <li><a class="dropdown-item" asp-controller="Report" asp-action="DailyReport">Theo ngày</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Report" asp-action="AreaReport">Theo khu vực</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Report" asp-action="SummaryReport">Tổng hợp</a></li>
+                                    </ul>
+                                </li>
                             }
+                        }
 
-                            <!-- MENU CHO NHÂN VIÊN ĐIỀU PHỐI -->
-                            @if (User?.IsInRole("Dispatcher") ?? false)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="/Order">Quản lý đơn hàng</a></li>
-                            }
+                        @* Khách hàng *@
+                        @if (User.IsInRole("Customer"))
+                        {
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Order" asp-action="Create">Tạo đơn</a></li>
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Order" asp-action="MyOrders">Đơn của tôi</a></li>
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Price" asp-action="Index">Bảng giá</a></li>
+                        }
 
-                            <!-- MENU CHO NHÂN VIÊN GIAO HÀNG -->
-                            @if (User?.IsInRole("Shipper") ?? false)
-                            {
-                                <li class="nav-item"><a class="nav-link" href="/Order">Đơn hàng được giao</a></li>
-                            }
+                        @* Shipper *@
+                        @if (User.IsInRole("Shipper"))
+                        {
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Order" asp-action="Index">Giao hàng</a></li>
+                        }
 
-                            <!-- ĐĂNG XUẤT -->
-                            <form asp-action="Logout" asp-controller="Auth" method="post">
-                                <button class="btn btn-link nav-link">Đăng xuất</button>
-                            </form>
+                        @* Menu chung *@
+                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Order" asp-action="Tracking">Tra cứu</a></li>
+                    </ul>
+
+                    @* RIGHT SIDE - Auth Button *@
+                    <div class="ms-lg-4">
+                        @if (isAuthenticated)
+                        {
+                            <div class="dropdown">
+                                <button class="btn btn-primary py-2 px-4 d-flex align-items-center dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown">
+                                    <i class="fa-solid fa-user me-2"></i> @userName
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                    <li>
+                                        <form asp-action="Logout" asp-controller="Auth" method="post">
+                                            <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-power-off me-2"></i> Đăng xuất</button>
+                                        </form>
+                                        <form asp-action="" asp-controller="" method="post">
+                                            <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-user me-2"></i> Tài khoản</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
                         }
                         else
                         {
-                            <li class="nav-item"><a class="nav-link" href="/Order/Tracking">Tra cứu đơn hàng</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Auth/Login">Đăng nhập</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Auth/Register">Đăng ký</a></li>
+                            <a class="btn btn-primary py-2 px-4 d-none d-lg-block" asp-controller="Auth" asp-action="Login">Đăng nhập</a>
+                            @* Hiển thị trên mobile *@
+                            <div class="d-lg-none mt-2">
+                                <a class="btn btn-outline-primary w-100 mb-2" asp-controller="Auth" asp-action="Login">Đăng nhập</a>
+                                <a class="btn btn-primary w-100" asp-controller="Auth" asp-action="Register">Đăng ký</a>
+                            </div>
                         }
-
-                    </ul>
+                    </div>
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
+
+    <div class="container-fluid p-0">
+        @* Dùng container-fluid p-0 để các section con (banner) có thể full-width *@
+        <main role="main">
+            @* Logic thông báo giữ nguyên *@
+            @if (!string.IsNullOrEmpty(ViewBag.Message))
+            {
+                <div class="container mt-4">
+                    <div class="alert alert-info shadow-sm border-0" role="alert"><i class="fa-solid fa-bell me-2"></i> @ViewBag.Message</div>
+                </div>
+            }
+
+            @* Nội dung chính *@
+            <div class="container py-5">
+                @RenderBody()
+            </div>
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - BTLWebVanChuyen - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <footer class="bg-dark text-white pt-5 mt-5">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-4 col-md-6">
+                    <h3 class="text-primary mb-4">FASTER<span class="text-white">SHIP</span></h3>
+                    <p class="text-white-50">Dịch vụ vận chuyển hàng hóa nhanh chóng, an toàn và tiết kiệm chi phí hàng đầu Việt Nam.</p>
+                    <div class="d-flex pt-2">
+                        <a class="btn btn-outline-light btn-social me-2 rounded-circle" href="#"><i class="fab fa-twitter"></i></a>
+                        <a class="btn btn-outline-light btn-social me-2 rounded-circle" href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a class="btn btn-outline-light btn-social me-2 rounded-circle" href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <h4 class="text-white mb-4">Liên kết nhanh</h4>
+                    <div class="d-flex flex-column justify-content-start">
+                        <a class="text-white-50 mb-2 text-decoration-none" asp-controller="Home" asp-action="Index"><i class="fa fa-angle-right me-2"></i>Trang chủ</a>
+                        <a class="text-white-50 mb-2 text-decoration-none" asp-controller="Order" asp-action="Tracking"><i class="fa fa-angle-right me-2"></i>Tra cứu đơn</a>
+                        <a class="text-white-50 mb-2 text-decoration-none" asp-controller="Home" asp-action="Privacy"><i class="fa fa-angle-right me-2"></i>Chính sách bảo mật</a>
+                        <a class="text-white-50 text-decoration-none" href="#"><i class="fa fa-angle-right me-2"></i>Liên hệ</a>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <h4 class="text-white mb-4">Liên hệ</h4>
+                    <p class="text-white-50"><i class="fa fa-map-marker-alt me-3 text-primary"></i>123 Đường ABC, Hà Nội</p>
+                    <p class="text-white-50"><i class="fa fa-phone-alt me-3 text-primary"></i>+84 123 456 789</p>
+                    <p class="text-white-50"><i class="fa fa-envelope me-3 text-primary"></i>info@example.com</p>
+                </div>
+            </div>
+        </div>
+        <div class="container border-top border-secondary py-4">
+            <div class="text-center text-white-50">
+                &copy; 2025 <a class="text-primary text-decoration-none" href="#">BTLWebVanChuyen</a>. All Rights Reserved.
+            </div>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

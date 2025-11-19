@@ -2,17 +2,40 @@
     ViewData["Title"] = "Tra cứu đơn hàng";
 }
 
-<h2>Tra cứu đơn hàng</h2>
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+            <div class="card-header bg-primary text-white text-center p-4">
+                <h3 class="mb-0 fw-bold"><i class="fa-solid fa-magnifying-glass-location me-2"></i> @ViewData["Title"]</h3>
+                <p class="mb-0 opacity-75">Nhập mã vận đơn để theo dõi hành trình</p>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Tracking" method="post">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Mã vận đơn</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-barcode text-muted"></i></span>
+                            <input type="text" name="trackingCode" class="form-control bg-light border-start-0 ps-0" placeholder="VD: MVD123456" required style="font-size: 1.1rem;" />
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary py-3 fw-bold rounded-pill shadow-sm hover-top">
+                            <i class="fa-solid fa-search me-2"></i>Tra cứu ngay
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
-<form asp-action="Tracking" method="post" class="mb-3">
-    <div class="mb-3">
-        <label class="form-label">Nhập mã vận đơn:</label>
-        <input type="text" name="trackingCode" class="form-control" placeholder="MVD171120250001" />
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger mt-4 shadow-sm border-0 rounded-4 d-flex align-items-center animate__animated animate__fadeInUp">
+                <i class="fa-solid fa-circle-exclamation fa-2x me-3"></i>
+                <div>
+                    <h6 class="fw-bold mb-0">Không tìm thấy!</h6>
+                    <p class="mb-0 small">@ViewBag.Error</p>
+                </div>
+            </div>
+        }
     </div>
-    <button type="submit" class="btn btn-primary">Tra cứu</button>
-</form>
-
-@if (ViewBag.Error != null)
-{
-    <div class="alert alert-danger">@ViewBag.Error</div>
-}
+</div>

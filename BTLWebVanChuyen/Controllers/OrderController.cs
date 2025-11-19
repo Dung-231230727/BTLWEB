@@ -147,6 +147,8 @@ namespace BTLWebVanChuyen.Controllers
             order.CustomerId = customer.Id;
             order.CreatedAt = DateTime.Now;
             order.Status = OrderStatus.Pending;
+            order.ReceiverName = vm.Order.ReceiverName;
+            order.ReceiverPhone = vm.Order.ReceiverPhone;
 
             // Tính lại TotalPrice trên server
             var pickupPrice = await _context.PriceTables.FirstOrDefaultAsync(p => p.AreaId == order.PickupAreaId);
@@ -363,6 +365,8 @@ namespace BTLWebVanChuyen.Controllers
             order.DistanceKm = vm.Order.DistanceKm;
             order.WeightKg = vm.Order.WeightKg;
             order.Status = vm.Order.Status;
+            order.ReceiverName = vm.Order.ReceiverName;
+            order.ReceiverPhone = vm.Order.ReceiverPhone;
 
             // Tính lại TotalPrice
             var pickupPrice = await _context.PriceTables.FirstOrDefaultAsync(p => p.AreaId == order.PickupAreaId);

@@ -3,18 +3,39 @@
     ViewData["Title"] = "Thêm khu vực mới";
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-0 text-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                    <i class="fa-solid fa-plus fa-2x text-primary"></i>
+                </div>
+                <h3 class="fw-bold text-dark">@ViewData["Title"]</h3>
+                <p class="text-muted">Khai báo khu vực vận chuyển mới</p>
+            </div>
 
-<form asp-action="Create" method="post">
-    <div class="form-group">
-        <label>Area Name</label>
-        <input asp-for="AreaName" class="form-control" />
-        <span asp-validation-for="AreaName" class="text-danger"></span>
+            <div class="card-body p-4 pt-2">
+                <form asp-action="Create" method="post">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Tên khu vực</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-signature text-muted"></i></span>
+                            <input asp-for="AreaName" class="form-control bg-light border-start-0" placeholder="Nhập tên khu vực (VD: Hà Nội)" style="height: 50px;" />
+                        </div>
+                        <span asp-validation-for="AreaName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary py-3 rounded-pill fw-bold shadow-sm hover-top">
+                            <i class="fa-solid fa-check me-2"></i>Thêm mới
+                        </button>
+                        <a asp-action="Index" class="btn btn-light py-3 rounded-pill fw-bold text-secondary">Quay lại</a>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-
-    <button type="submit" class="btn btn-success">Thêm</button>
-    <a asp-action="Index" class="btn btn-secondary">Hủy</a>
-</form>
+</div>
 
 @section Scripts {
     @{

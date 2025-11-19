@@ -4,40 +4,65 @@
     ViewData["Title"] = "Đơn hàng của tôi";
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <div>
+        <h6 class="text-primary text-uppercase mb-1" style="letter-spacing: 1px;">Cá nhân</h6>
+        <h2 class="text-dark fw-bold m-0"><i class="fa-solid fa-clipboard-list me-2 text-primary"></i> @ViewData["Title"]</h2>
+    </div>
+    <a class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-top" asp-action="Create">
+        <i class="fa-solid fa-plus me-2"></i>Tạo đơn mới
+    </a>
+</div>
 
-<p>
-    <a class="btn btn-success" asp-action="Create">Tạo đơn hàng mới</a>
-</p>
+<div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="py-4 ps-4 text-secondary text-uppercase font-weight-bold small border-0">Mã vận đơn</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Điểm lấy</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Điểm giao</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Điều phối</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Shipper</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Trạng thái</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Ngày tạo</th>
+                        <th class="py-4 pe-4 text-center text-secondary text-uppercase font-weight-bold small border-0">Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model)
+                    {
+                        <tr class="border-bottom">
+                            <td class="ps-4 py-3 fw-bold text-primary">@order.TrackingCode</td>
+                            <td class="text-muted">@order.PickupArea.AreaName</td>
+                            <td class="text-muted">@order.DeliveryArea.AreaName</td>
+                            <td class="text-muted">@(order.Dispatcher?.User?.FullName ?? "---")</td>
+                            <td class="text-muted">@(order.Shipper?.User?.FullName ?? "---")</td>
+                            <td>
+                                <span class="badge bg-success bg-opacity-10 text-dark border border-success rounded-pill px-3">
+                                    @order.Status.GetDisplayName()
+                                </span>
+                            </td>
+                            <td class="text-muted">@order.CreatedAt.ToString("dd/MM/yyyy")</td>
+                            <td class="pe-4 py-3 text-center">
+                                <a class="btn btn-outline-primary btn-sm rounded-pill px-3" asp-action="Details" asp-route-id="@order.Id">
+                                    Xem <i class="fa-solid fa-arrow-right ms-1"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Mã vận đơn</th>
-            <th>Khu vực lấy</th>
-            <th>Khu vực giao</th>
-            <th>Nhân viên điều phối</th>
-            <th>Nhân viên giao hàng</th>
-            <th>Trạng thái</th>
-            <th>Ngày tạo</th>
-            <th>Hành động</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var order in Model)
+        @if (!Model.Any())
         {
-            <tr>
-                <td>@order.TrackingCode</td>
-                <td>@order.PickupArea.AreaName</td>
-                <td>@order.DeliveryArea.AreaName</td>
-                <td>@order.Dispatcher?.User?.FullName</td>
-                <td>@order.Shipper?.User?.FullName</td>
-                <td>@order.Status.GetDisplayName()</td>
-                <td>@order.CreatedAt.ToString("dd/MM/yyyy")</td>
-                <td>
-                    <a class="btn btn-sm btn-info" asp-action="Details" asp-route-id="@order.Id">Xem</a>
-                </td>
-            </tr>
+            <div class="text-center p-5">
+                <i class="fa-solid fa-box-open fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Bạn chưa có đơn hàng nào.</p>
+                <a class="btn btn-primary rounded-pill fw-bold" asp-action="Create">Tạo đơn ngay</a>
+            </div>
         }
-    </tbody>
-</table>
+    </div>
+</div>
