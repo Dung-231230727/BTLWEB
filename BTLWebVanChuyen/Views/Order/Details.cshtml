@@ -1,13 +1,21 @@
 ﻿@model BTLWebVanChuyen.Models.Order
 @using BTLWebVanChuyen.Utility
+@using BTLWebVanChuyen.Models
+@using Microsoft.AspNetCore.Identity
 @{
     ViewData["Title"] = "Chi tiết đơn hàng";
     var shippers = ViewBag.Shippers as List<BTLWebVanChuyen.Models.Employee> ?? new List<BTLWebVanChuyen.Models.Employee>();
+    var warehouses = ViewBag.Warehouses as List<BTLWebVanChuyen.Models.Warehouse> ?? new List<BTLWebVanChuyen.Models.Warehouse>();
+
+    string currentUserName = User.Identity?.Name ?? string.Empty;
+    bool isCrossArea = Model.PickupAreaId != Model.DeliveryAreaId;
+    bool isFinalState = Model.Status == OrderStatus.Delivered || Model.Status == OrderStatus.Returned || Model.Status == OrderStatus.Cancelled;
 }
 
 <div class="row justify-content-center mt-4">
     <div class="col-md-10 col-lg-8">
         <div class="card shadow-lg border-0 rounded-4">
+            @* --- HEADER --- *@
             <div class="card-header bg-primary text-white p-4 rounded-top-4 d-flex justify-content-between align-items-center">
                 <div>
                     <h4 class="mb-0 fw-bold"><i class="fa-solid fa-circle-info me-2"></i> @ViewData["Title"]</h4>
@@ -17,62 +25,265 @@
             </div>
 
             <div class="card-body p-4">
+                @* --- THÔNG TIN CHUNG --- *@
                 <div class="row g-4">
                     <div class="col-md-6">
                         <h6 class="text-uppercase text-primary fw-bold mb-3 border-bottom pb-2">Thông tin chung</h6>
                         <dl class="row g-2">
                             <dt class="col-sm-5 text-secondary small text-uppercase">Người gửi</dt>
                             <dd class="col-sm-7 fw-bold">@Model.Customer?.User?.FullName</dd>
-
                             <dt class="col-sm-5 text-secondary small text-uppercase">Người nhận</dt>
                             <dd class="col-sm-7 fw-bold">@Model.ReceiverName</dd>
-
                             <dt class="col-sm-5 text-secondary small text-uppercase">SĐT người nhận</dt>
                             <dd class="col-sm-7 fw-bold">@Model.ReceiverPhone</dd>
-
                             <dt class="col-sm-5 text-secondary small text-uppercase">Dispatcher</dt>
                             <dd class="col-sm-7">@(Model.Dispatcher?.User?.FullName ?? "Chưa gán")</dd>
-
                             <dt class="col-sm-5 text-secondary small text-uppercase">Shipper</dt>
                             <dd class="col-sm-7">@(Model.Shipper?.User?.FullName ?? "Chưa gán")</dd>
-
-                            <dt class="col-sm-5 text-secondary small text-uppercase">Ngày tạo</dt>
-                            <dd class="col-sm-7">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
                         </dl>
                     </div>
                     <div class="col-md-6">
                         <h6 class="text-uppercase text-primary fw-bold mb-3 border-bottom pb-2">Hành trình & Chi phí</h6>
                         <dl class="row g-2">
                             <dt class="col-sm-5 text-secondary small text-uppercase">Điểm lấy</dt>
-                            <dd class="col-sm-7">@Model.PickupArea.AreaName <br /><span class="text-muted small">(@Model.PickupAddress)</span></dd>
+                            <dd class="col-sm-7">
+                                @Model.PickupArea.AreaName <br />
+                                <span class="text-muted small">(@Model.PickupAddress)</span>
+                                @if (Model.PickupWarehouse != null)
+                                {
+                                    <div class="mt-1"><span class="badge bg-light text-dark border"><i class="fa-solid fa-warehouse me-1"></i> Kho nhập: @Model.PickupWarehouse.Name</span></div>
+                                }
+                            </dd>
 
                             <dt class="col-sm-5 text-secondary small text-uppercase">Điểm giao</dt>
-                            <dd class="col-sm-7">@Model.DeliveryArea.AreaName <br /><span class="text-muted small">(@Model.DeliveryAddress)</span></dd>
+                            <dd class="col-sm-7">
+                                @Model.DeliveryArea.AreaName <br />
+                                <span class="text-muted small">(@Model.DeliveryAddress)</span>
+                                @if (Model.DeliveryWarehouse != null)
+                                {
+                                    <div class="mt-1"><span class="badge bg-light text-dark border"><i class="fa-solid fa-warehouse me-1"></i> Kho xuất: @Model.DeliveryWarehouse.Name</span></div>
+                                }
+                            </dd>
 
+                            <dt class="col-sm-5 text-secondary small text-uppercase">Thanh toán</dt>
+                            <dd class="col-sm-7">
+                                @if (Model.PaymentStatus == PaymentStatus.Paid)
+                                {
+                                    <span class="badge bg-success">Đã thanh toán</span>
+                                }
+                                else
+                                {
+
+                                    <span class="badge bg-warning text-dark">Chưa thanh toán</span>
+                                }
+                                <div class="small text-muted">(@Model.Payer.GetDisplayName() - @Model.PaymentMethod)</div>
+                            </dd>
                             <dt class="col-sm-5 text-secondary small text-uppercase">Tổng phí</dt>
                             <dd class="col-sm-7 fs-5 text-success fw-bold">@Model.TotalPrice.ToString("N0") đ</dd>
                         </dl>
                     </div>
                 </div>
 
-                @if (User.IsInRole("Shipper"))
+                <hr class="my-4">
+                <h6 class="text-uppercase text-success fw-bold mb-3 border-bottom pb-2">Nhật ký trạng thái</h6>
+                <div class="timeline" style="max-height: 200px; overflow-y: auto;">
+                    @if (Model.OrderLogs != null)
+                    {
+                        foreach (var log in Model.OrderLogs.OrderByDescending(l => l.Time))
+                        {
+                            <div class="border-start border-2 border-success ps-3 mb-3 ms-2">
+                                <p class="mb-0 fw-bold text-dark">@log.Status.GetDisplayName()</p>
+                                <small class="text-muted">@log.Time.ToString("dd/MM/yyyy HH:mm") - @log.Note</small>
+                            </div>
+                        }
+                    }
+                </div>
+
+                @* === KHU VỰC CHỨC NĂNG QUẢN LÝ === *@
+                @if (User.Identity!.IsAuthenticated && !isFinalState)
                 {
-                    <div class="bg-light p-4 rounded-4 mt-4 border">
-                        <h5 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-truck-fast me-2 text-primary"></i> Cập nhật trạng thái</h5>
-                        <form asp-action="UpdateStatus" method="post" class="d-flex gap-3">
-                            <input type="hidden" name="orderId" value="@Model.Id" />
-                            <select name="status" class="form-select bg-white border-secondary">
-                                @foreach (var status in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
-                                {
-                                    if (status == OrderStatus.Delivering || status == OrderStatus.Delivered || status == OrderStatus.Failed)
+                    <hr class="my-4">
+                    <h5 class="text-primary fw-bold mb-4"><i class="fa-solid fa-cog me-2"></i> Quản lý Đơn hàng</h5>
+
+                    @* --- DISPATCHER CONTROL --- *@
+                    @if (User.IsInRole("Dispatcher"))
+                    {
+                        @* A. Giai đoạn 1: GÁN LẤY HÀNG (Pending / PickupFailed) *@
+                        @if (Model.Status == OrderStatus.Pending || Model.Status == OrderStatus.PickupFailed)
+                        {
+                            <div class="card shadow-sm border-primary mb-3">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-bold text-primary">Điều phối Lấy hàng (Tại @Model.PickupArea.AreaName)</h6>
+                                    <form asp-action="Assign" method="post" class="assign-form d-flex gap-2 flex-wrap">
+                                        <input type="hidden" name="orderId" value="@Model.Id" />
+
+                                        @* Chọn Shipper *@
+                                        <div class="flex-grow-1">
+                                            <label class="small text-muted">Shipper lấy:</label>
+                                            <select name="shipperId" class="form-select" required>
+                                                <option value="">-- Chọn Shipper --</option>
+                                                @foreach (var s in shippers)
+                                                {
+                                                    <option value="@s.Id">@s.User!.FullName</option>
+                                                }
+                                            </select>
+                                        </div>
+
+                                        @* Chọn Kho Nhập *@
+                                        <div class="flex-grow-1">
+                                            <label class="small text-muted">Nhập về kho:</label>
+                                            <select name="warehouseId" class="form-select" required>
+                                                <option value="">-- Chọn Kho --</option>
+                                                @foreach (var w in warehouses)
+                                                {
+                                                    <option value="@w.Id">@w.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+
+                                        <div class="w-100 text-end mt-2">
+                                            <button class="btn btn-primary rounded-pill px-4 fw-bold">Gán Lấy Hàng</button>
+                                        </div>
+                                    </form>
+                                    @if (Model.Status == OrderStatus.PickupFailed)
                                     {
-                                        var selected = Model.Status == status ? "selected" : "";
-                                        <option value="@status" selected="@(selected)">@status.GetDisplayName()</option>
+                                        <div class="mt-2 text-danger small fw-bold">* Lấy thất bại. Vui lòng gán lại hoặc hủy.</div>
                                     }
-                                }
-                            </select>
-                            <button type="submit" class="btn btn-success fw-bold px-4 rounded-pill">Cập nhật</button>
-                        </form>
+                                </div>
+                            </div>
+                        }
+
+                        @* B. Giai đoạn 2: LUÂN CHUYỂN (Chỉ hiện khi Khác vùng & Đã lấy thành công) *@
+                        @if (isCrossArea && Model.Status == OrderStatus.PickupSuccess)
+                        {
+                            <div class="card shadow-sm border-warning mb-3 bg-light">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-bold text-warning">Luân chuyển liên khu vực</h6>
+                                    <p class="small text-muted">Hàng đang ở kho lấy (@(Model.PickupWarehouse?.Name ?? "Kho lấy")). Chuyển đi kho giao (@Model.DeliveryArea.AreaName)?</p>
+                                    <button onclick="updateOrderStatus(@Model.Id, '@OrderStatus.InterAreaTransporting')" class="btn btn-warning fw-bold btn-sm rounded-pill">
+                                        <i class="fa-solid fa-truck-arrow-right"></i> Bắt đầu vận chuyển
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        @if (Model.Status == OrderStatus.InterAreaTransporting)
+                        {
+                            <div class="card shadow-sm border-info mb-3 bg-light">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-bold text-info">Nhập kho đích</h6>
+                                    <p class="small text-muted">Hàng đã đến kho giao (@Model.DeliveryArea.AreaName)?</p>
+                                    <button onclick="updateOrderStatus(@Model.Id, '@OrderStatus.ArrivedDeliveryHub')" class="btn btn-info text-white fw-bold btn-sm rounded-pill">
+                                        <i class="fa-solid fa-warehouse"></i> Xác nhận Nhập kho
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        @* C. Giai đoạn 3: GÁN GIAO HÀNG (Tại kho giao) *@
+                        @if (Model.Status == OrderStatus.ArrivedDeliveryHub ||
+                                        (Model.Status == OrderStatus.PickupSuccess && !isCrossArea) ||
+                                        Model.Status == OrderStatus.DeliveryFailed)
+                        {
+                            <div class="card shadow-sm border-success mb-3">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-bold text-success">Điều phối Giao hàng (Tại @Model.DeliveryArea.AreaName)</h6>
+                                    <form asp-action="Assign" method="post" class="assign-form d-flex gap-2 flex-wrap">
+                                        <input type="hidden" name="orderId" value="@Model.Id" />
+
+                                        @* Chọn Shipper *@
+                                        <div class="flex-grow-1">
+                                            <label class="small text-muted">Shipper giao:</label>
+                                            <select name="shipperId" class="form-select" required>
+                                                <option value="">-- Chọn Shipper --</option>
+                                                @foreach (var s in shippers)
+                                                {
+                                                    <option value="@s.Id">@s.User!.FullName</option>
+                                                }
+                                            </select>
+                                        </div>
+
+                                        @* Chọn Kho Xuất *@
+                                        <div class="flex-grow-1">
+                                            <label class="small text-muted">Xuất từ kho:</label>
+                                            <select name="warehouseId" class="form-select" required>
+                                                <option value="">-- Chọn Kho --</option>
+                                                @foreach (var w in warehouses)
+                                                {
+                                                    <option value="@w.Id">@w.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+
+                                        <div class="w-100 text-end mt-2">
+                                            <button class="btn btn-success rounded-pill px-4 fw-bold">Gán Giao Hàng</button>
+                                        </div>
+                                    </form>
+
+                                    @if (Model.Status == OrderStatus.DeliveryFailed)
+                                    {
+                                        <div class="mt-2 pt-2 border-top d-flex gap-2 align-items-center">
+                                            <small class="text-danger fw-bold">Giao thất bại.</small>
+                                            <button onclick="updateOrderStatus(@Model.Id, '@OrderStatus.Returning')" class="btn btn-secondary btn-sm rounded-pill">
+                                                <i class="fa-solid fa-reply"></i> Chuyển hoàn trả
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @* D. Nút Hủy khẩn cấp *@
+                        <div class="text-end mt-2">
+                            <button onclick="updateOrderStatus(@Model.Id, '@OrderStatus.Cancelled')" class="btn btn-outline-danger btn-sm border-0">Hủy đơn hàng này</button>
+                        </div>
+                    }
+
+                    @* --- SHIPPER CONTROL --- *@
+                    @if (User.IsInRole("Shipper") && Model.Shipper?.User?.UserName == currentUserName)
+                    {
+                        <div class="card shadow-sm border-dark mb-3">
+                            <div class="card-body p-3">
+                                <h6 class="fw-bold mb-3"><i class="fa-solid fa-truck-fast me-2"></i> Cập nhật trạng thái</h6>
+                                <form asp-action="UpdateStatus" method="post" id="shipper-update-form" class="d-flex gap-2 align-items-center">
+                                    <input type="hidden" name="orderId" value="@Model.Id" />
+                                    <select name="status" class="form-select fw-bold text-dark">
+                                        @* Logic Dropdown thông minh cho Shipper *@
+
+                                        @* Shipper Lấy hàng *@
+                                        @if (Model.Status == OrderStatus.AssignedPickupShipper || Model.Status == OrderStatus.Picking)
+                                        {
+                                            <option value="@OrderStatus.Picking" selected="@(Model.Status == OrderStatus.Picking)">Đang đi lấy</option>
+                                            <option value="@OrderStatus.PickupSuccess">Lấy thành công</option>
+                                            <option value="@OrderStatus.PickupFailed">Lấy thất bại</option>
+                                        }
+                                        @* Shipper Giao hàng *@
+                                        else if (Model.Status == OrderStatus.AssignedDeliveryShipper || Model.Status == OrderStatus.Delivering)
+                                        {
+                                            <option value="@OrderStatus.Delivering" selected="@(Model.Status == OrderStatus.Delivering)">Đang giao hàng</option>
+                                            <option value="@OrderStatus.Delivered">Giao thành công</option>
+                                            <option value="@OrderStatus.DeliveryFailed">Giao thất bại</option>
+                                        }
+                                        @* Shipper Hoàn Trả *@
+                                        else if (Model.Status == OrderStatus.Returning)
+                                        {
+                                            <option value="@OrderStatus.Returned">Đã hoàn trả xong</option>
+                                            <option value="@OrderStatus.ReturnFailed">Trả hàng thất bại</option>
+                                        }
+                                    </select>
+                                    <button type="button" class="btn btn-dark btn-sm rounded-pill px-3 btn-shipper-submit">Cập nhật</button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                }
+
+                @* --- THANH TOÁN (Chỉ hiện khi đã giao xong) --- *@
+                @if (User.IsInRole("Dispatcher") && (Model.Status == OrderStatus.Delivered || Model.Status == OrderStatus.Returned) && Model.PaymentStatus != PaymentStatus.Paid)
+                {
+                    <div class="mt-4 text-center">
+                        <button type="button" id="markPaidBtn" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                            <i class="fa-solid fa-money-check-dollar me-2"></i> Xác nhận Đã thu tiền (COD)
+                        </button>
                     </div>
                 }
             </div>
@@ -91,3 +302,49 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // AJAX Cập nhật trạng thái (Dùng chung)
+        function updateOrderStatus(orderId, status) {
+            if(!confirm("Xác nhận cập nhật trạng thái?")) return;
+
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            $.post('@Url.Action("UpdateStatus", "Order")', { orderId: orderId, status: status, __RequestVerificationToken: token })
+             .done(function(res) {
+                 if(res.success) { alert("Thành công!"); location.reload(); }
+                 else alert(res.message);
+             })
+             .fail(function() { alert("Lỗi kết nối."); });
+        }
+
+        // AJAX Gán Shipper
+        $('.assign-form').on('submit', function(e) {
+            e.preventDefault();
+            var form = $(this);
+            $.post(form.attr('action'), form.serialize())
+             .done(function(res) {
+                 if(res.success) { alert("Gán thành công!"); location.reload(); }
+                 else alert(res.message);
+             })
+             .fail(function() { alert("Lỗi kết nối."); });
+        });
+
+        // Xử lý nút Shipper Update
+        $('.btn-shipper-submit').click(function() {
+            var form = $('#shipper-update-form');
+            updateOrderStatus(form.find('input[name="orderId"]').val(), form.find('select').val());
+        });
+
+        // MarkAsPaid (COD)
+        $('#markPaidBtn').click(function() {
+             if(!confirm("Xác nhận đã thu đủ tiền COD?")) return;
+             var token = $('input[name="__RequestVerificationToken"]').val();
+             $.post('@Url.Action("MarkAsPaid", "Order")', { orderId: '@Model.Id', __RequestVerificationToken: token })
+              .done(function(res) {
+                  if(res.success) { alert("Đã xác nhận thanh toán!"); location.reload(); }
+                  else alert(res.message);
+              });
+        });
+    </script>
+}

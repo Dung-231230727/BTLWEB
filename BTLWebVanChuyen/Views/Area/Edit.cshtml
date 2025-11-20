@@ -16,6 +16,7 @@
 
             <div class="card-body p-4 pt-2">
                 <form asp-action="Edit" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
                     <input type="hidden" asp-for="AreaId" />
 
                     <div class="mb-4">
@@ -28,8 +29,8 @@
                     </div>
 
                     <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary py-3 rounded-pill fw-bold shadow-sm hover-top">
-                            <i class="fa-solid fa-save me-2"></i>Cập nhật
+                        <button type="submit" class="btn btn-warning py-3 rounded-pill fw-bold shadow-sm hover-top">
+                            <i class="fa-solid fa-save me-2"></i>Lưu thay đổi
                         </button>
                         <a asp-action="Index" class="btn btn-light py-3 rounded-pill fw-bold text-secondary">Hủy bỏ</a>
                     </div>
@@ -43,4 +44,5 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
 }

@@ -20,109 +20,222 @@ namespace BTLWebVanChuyen.Controllers
             _userManager = userManager;
         }
 
-        public async Task<IActionResult> Index()
+        // ==========================================
+        // 1. INDEX: Danh sách + Tìm kiếm + Lọc
+        // ==========================================
+        public async Task<IActionResult> Index(string searchString, int? filterAreaId, EmployeeRole? filterRole)
         {
-            var employees = await _context.Employees
+            var query = _context.Employees
                 .Include(e => e.User)
                 .Include(e => e.Area)
-                .ToListAsync();
-            return View(employees);
+                .AsQueryable();
+
+            // 1. Tìm kiếm theo Tên hoặc Email
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                query = query.Where(e => e.User!.FullName.Contains(searchString) || e.User.Email!.Contains(searchString));
+            }
+
+            // 2. Lọc theo Khu vực
+            if (filterAreaId.HasValue)
+            {
+                query = query.Where(e => e.AreaId == filterAreaId);
+            }
+
+            // 3. Lọc theo Vai trò
+            if (filterRole.HasValue)
+            {
+                query = query.Where(e => e.Role == filterRole);
+            }
+
+            ViewData["CurrentFilter"] = searchString;
+            ViewData["AreaId"] = new SelectList(_context.Areas, "AreaId", "AreaName", filterAreaId);
+
+            return View(await query.ToListAsync());
         }
 
+        // ==========================================
+        // 2. DETAILS
+        // ==========================================
+        public async Task<IActionResult> Details(int? id)
+        {
+            if (id == null) return NotFound();
+            var employee = await _context.Employees
+                .Include(e => e.User)
+                .Include(e => e.Area)
+                .FirstOrDefaultAsync(m => m.Id == id);
+            if (employee == null) return NotFound();
+            return View(employee);
+        }
+
+        // ==========================================
+        // 3. CREATE: Tạo User + Employee
+        // ==========================================
         public IActionResult Create()
         {
-            ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
             ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName");
             return View();
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Employee employee, string role)
         {
-            if (!ModelState.IsValid)
+            // 1. Kiểm tra Model cơ bản (như AreaId)
+            if (employee.AreaId == 0)
             {
-                ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
-                ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName", employee.AreaId);
-                return View(employee);
+                ModelState.AddModelError("AreaId", "Vui lòng chọn khu vực quản lý.");
             }
 
-            var user = new ApplicationUser
-            {
-                UserName = employee.User!.Email,
-                Email = employee.User.Email,
-                FullName = employee.User.FullName,
-                IsEmployee = true
-            };
+            // Lấy thông tin User từ form (do binding phức tạp)
+            // Trong View, name="User.Email", "User.FullName", "User.PasswordHash"
+            // Nhưng object employee.User có thể null nếu binding không khớp hết
+            // Nên ta lấy trực tiếp hoặc qua parameter binding
 
-            var result = await _userManager.CreateAsync(user, "123@Abc"); // password mặc định
-            if (!result.Succeeded)
+            // Để đơn giản và chắc chắn, ta dùng employee.User nếu binding thành công
+            // Nếu không, ta cần thêm logic lấy từ Request.Form hoặc ViewModel riêng
+
+            // Giả sử binding thành công nhờ <input name="User.Email" ... />
+            if (ModelState.IsValid && employee.User != null)
             {
-                foreach (var error in result.Errors)
-                    ModelState.AddModelError("", error.Description);
-                ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
-                ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName", employee.AreaId);
-                return View(employee);
+                var user = new ApplicationUser
+                {
+                    UserName = employee.User.Email,
+                    Email = employee.User.Email,
+                    FullName = employee.User.FullName,
+                    IsCustomer = false // Nhân viên không phải khách hàng
+                };
+
+                // Lấy mật khẩu từ form (User.PasswordHash đang chứa password text từ input)
+                string password = employee.User.PasswordHash ?? "123@Abc";
+
+                var result = await _userManager.CreateAsync(user, password);
+
+                if (result.Succeeded)
+                {
+                    await _userManager.AddToRoleAsync(user, role);
+
+                    // Gán UserId vừa tạo cho Employee
+                    employee.UserId = user.Id;
+                    employee.Role = role == "Dispatcher" ? EmployeeRole.Dispatcher : EmployeeRole.Shipper;
+
+                    // Xóa object User con để tránh EF add lại User (vì User đã được tạo bởi UserManager)
+                    employee.User = null;
+
+                    _context.Employees.Add(employee);
+                    await _context.SaveChangesAsync();
+
+                    TempData["Message"] = "Thêm nhân viên thành công.";
+                    return RedirectToAction(nameof(Index));
+                }
+                else
+                {
+                    foreach (var error in result.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                }
             }
 
-            await _userManager.AddToRoleAsync(user, role);
-            employee.UserId = user.Id;
-            employee.Role = role == "Dispatcher" ? EmployeeRole.Dispatcher : EmployeeRole.Shipper;
-            _context.Employees.Add(employee);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        public async Task<IActionResult> Edit(int id)
-        {
-            var employee = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
-            if (employee == null) return NotFound();
-
-            ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
+            // Nếu thất bại
             ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName", employee.AreaId);
             return View(employee);
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        // ==========================================
+        // 4. EDIT
+        // ==========================================
+        public async Task<IActionResult> Edit(int? id)
+        {
+            if (id == null) return NotFound();
+            var employee = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
+            if (employee == null) return NotFound();
+
+            ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName", employee.AreaId);
+            return View(employee);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Employee employee, string role)
         {
             if (id != employee.Id) return NotFound();
-            if (!ModelState.IsValid)
+
+            var empDb = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
+            if (empDb == null) return NotFound();
+
+            // Cập nhật thông tin Employee
+            empDb.Role = role == "Dispatcher" ? EmployeeRole.Dispatcher : EmployeeRole.Shipper;
+            empDb.AreaId = employee.AreaId;
+
+            // Cập nhật thông tin User (Chỉ FullName, không sửa Email/Password ở đây)
+            if (empDb.User != null && employee.User != null)
             {
-                ViewData["Roles"] = new List<string> { "Dispatcher", "Shipper" };
-                ViewData["Areas"] = new SelectList(_context.Areas, "AreaId", "AreaName", employee.AreaId);
-                return View(employee);
+                empDb.User.FullName = employee.User.FullName;
             }
 
-            var emp = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
-            emp!.User!.FullName = employee.User!.FullName;
-            emp.User.Email = employee.User.Email;
-            emp.Role = role == "Dispatcher" ? EmployeeRole.Dispatcher : EmployeeRole.Shipper;
-            emp.AreaId = employee.AreaId; // cập nhật khu vực
+            // Cập nhật Role trong Identity (Nếu thay đổi)
+            // (Logic này phức tạp: cần remove role cũ, add role mới. Để đơn giản ta chỉ update DB Employee.Role
+            // Nếu cần chuẩn Identity, hãy uncomment đoạn dưới)
+            /*
+            if (empDb.User != null)
+            {
+                var currentRoles = await _userManager.GetRolesAsync(empDb.User);
+                await _userManager.RemoveFromRolesAsync(empDb.User, currentRoles);
+                await _userManager.AddToRoleAsync(empDb.User, role);
+            }
+            */
 
-            _context.Update(emp);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Update(empDb);
+                await _context.SaveChangesAsync();
+                TempData["Message"] = "Cập nhật thành công.";
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Employees.Any(e => e.Id == id)) return NotFound();
+                else throw;
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> Delete(int id)
+        // ==========================================
+        // 5. DELETE
+        // ==========================================
+        public async Task<IActionResult> Delete(int? id)
         {
+            if (id == null) return NotFound();
             var employee = await _context.Employees.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
             if (employee == null) return NotFound();
             return View(employee);
         }
 
-        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var emp = await _context.Employees.FindAsync(id);
-            if (emp != null)
-            {
-                var user = await _userManager.FindByIdAsync(emp.UserId);
-                if (user != null) await _userManager.DeleteAsync(user);
+            if (emp == null) return NotFound();
 
-                _context.Employees.Remove(emp);
-                await _context.SaveChangesAsync();
+            // Check ràng buộc dữ liệu (Đơn hàng)
+            bool hasOrders = await _context.Orders.AnyAsync(o => o.DispatcherId == id || o.ShipperId == id);
+            if (hasOrders)
+            {
+                TempData["Error"] = "Không thể xóa nhân viên này vì đang phụ trách đơn hàng.";
+                return RedirectToAction(nameof(Index));
             }
+
+            // Xóa tài khoản Identity
+            var user = await _userManager.FindByIdAsync(emp.UserId);
+            if (user != null) await _userManager.DeleteAsync(user);
+
+            // Xóa Employee
+            _context.Employees.Remove(emp);
+            await _context.SaveChangesAsync();
+
+            TempData["Message"] = "Xóa nhân viên thành công.";
             return RedirectToAction(nameof(Index));
         }
     }

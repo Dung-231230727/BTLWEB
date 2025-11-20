@@ -1,5 +1,71 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model BTLWebVanChuyen.Models.Customer
 @{
+    ViewData["Title"] = "Chỉnh sửa khách hàng";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-0 text-center">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                    <i class="fa-solid fa-user-pen fa-2x text-warning"></i>
+                </div>
+                <h3 class="fw-bold text-dark">Cập Nhật Thông Tin</h3>
+            </div>
+
+            <div class="card-body p-4 pt-2">
+                <form asp-action="Edit" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger border-0 rounded-3 shadow-sm mb-4"></div>
+                    <input type="hidden" asp-for="Id" />
+
+                    @* Thông tin User Identity *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Họ và Tên</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-signature text-muted"></i></span>
+                            <input asp-for="User.FullName" class="form-control bg-light border-start-0" style="height: 50px;" />
+                        </div>
+                        <span asp-validation-for="User.FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Số điện thoại</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-phone text-muted"></i></span>
+                            <input asp-for="User.PhoneNumber" class="form-control bg-light border-start-0" style="height: 50px;" />
+                        </div>
+                        <span asp-validation-for="User.PhoneNumber" class="text-danger small"></span>
+                    </div>
+
+                    @* Thông tin Customer *@
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Địa chỉ</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-location-dot text-muted"></i></span>
+                            <input asp-for="Address" class="form-control bg-light border-start-0" style="height: 50px;" />
+                        </div>
+                        <span asp-validation-for="Address" class="text-danger small"></span>
+                    </div>
+
+                    <div class="alert alert-info small border-0 bg-info bg-opacity-10 rounded-3">
+                        <i class="fa-solid fa-circle-info me-1"></i> Email đăng nhập không thể thay đổi tại đây.
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-warning py-3 rounded-pill fw-bold shadow-sm hover-top">
+                            <i class="fa-solid fa-save me-2"></i>Lưu thay đổi
+                        </button>
+                        <a asp-action="Index" class="btn btn-light py-3 rounded-pill fw-bold text-secondary">Hủy bỏ</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
 }

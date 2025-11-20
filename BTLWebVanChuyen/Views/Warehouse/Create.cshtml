@@ -1,0 +1,67 @@
+﻿@model BTLWebVanChuyen.Models.Warehouse
+@{
+    ViewData["Title"] = "Thêm kho hàng mới";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-0 text-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                    <i class="fa-solid fa-plus fa-2x text-primary"></i>
+                </div>
+                <h3 class="fw-bold text-dark">@ViewData["Title"]</h3>
+                <p class="text-muted">Khai báo thông tin kho hàng mới</p>
+            </div>
+
+            <div class="card-body p-4 pt-2">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Tên kho hàng</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-signature text-muted"></i></span>
+                            <input asp-for="Name" class="form-control bg-light border-start-0" placeholder="Ví dụ: Kho Cầu Giấy A" required />
+                        </div>
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Địa chỉ kho</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-location-dot text-muted"></i></span>
+                            <input asp-for="Address" class="form-control bg-light border-start-0" placeholder="Số nhà, đường, quận/huyện..." required />
+                        </div>
+                        <span asp-validation-for="Address" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Thuộc Khu vực</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-map text-muted"></i></span>
+                            <select asp-for="AreaId" class="form-select bg-light border-start-0" style="height: 50px;" asp-items="ViewBag.AreaId">
+                                <option value="" disabled selected>-- Chọn khu vực --</option>
+                            </select>
+                        </div>
+                        <span asp-validation-for="AreaId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary py-3 rounded-pill fw-bold shadow-sm hover-top">
+                            <i class="fa-solid fa-check me-2"></i>Thêm mới
+                        </button>
+                        <a asp-action="Index" class="btn btn-light py-3 rounded-pill fw-bold text-secondary">Quay lại</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

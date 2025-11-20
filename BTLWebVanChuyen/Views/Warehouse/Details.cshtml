@@ -1,6 +1,6 @@
-﻿@model BTLWebVanChuyen.Models.Employee
+﻿@model BTLWebVanChuyen.Models.Warehouse
 @{
-    ViewData["Title"] = "Chi tiết nhân viên";
+    ViewData["Title"] = "Chi tiết kho hàng";
 }
 
 <div class="row justify-content-center mt-4">
@@ -8,25 +8,21 @@
         <div class="card shadow-lg border-0 rounded-4">
             <div class="card-header bg-white border-0 pt-4 pb-0 text-center">
                 <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                    <i class="fa-solid fa-id-card fa-3x text-info"></i>
+                    <i class="fa-solid fa-warehouse fa-3x text-info"></i>
                 </div>
-                <h3 class="fw-bold text-dark">@Model.User?.FullName</h3>
-                <p class="text-muted">@Model.Role</p>
+                <h3 class="fw-bold text-dark">@Model.Name</h3>
+                <p class="text-muted">ID: @Model.Id</p>
             </div>
 
             <div class="card-body p-4">
                 <div class="list-group list-group-flush rounded-4 shadow-sm">
                     <div class="list-group-item p-3 border-0 d-flex justify-content-between align-items-center bg-light mb-1 rounded">
-                        <span class="text-muted small text-uppercase fw-bold"><i class="fa-solid fa-envelope me-2"></i> Email</span>
-                        <span class="fw-bold text-dark">@Model.User?.Email</span>
-                    </div>
-                    <div class="list-group-item p-3 border-0 d-flex justify-content-between align-items-center bg-light mb-1 rounded">
-                        <span class="text-muted small text-uppercase fw-bold"><i class="fa-solid fa-map-location-dot me-2"></i> Khu vực</span>
-                        <span class="badge bg-primary rounded-pill px-3">@Model.Area?.AreaName</span>
+                        <span class="text-muted small text-uppercase fw-bold"><i class="fa-solid fa-location-dot me-2"></i> Địa chỉ</span>
+                        <span class="fw-bold text-dark text-end">@Model.Address</span>
                     </div>
                     <div class="list-group-item p-3 border-0 d-flex justify-content-between align-items-center bg-light rounded">
-                        <span class="text-muted small text-uppercase fw-bold"><i class="fa-solid fa-user-tag me-2"></i> ID Nhân viên</span>
-                        <span class="fw-bold text-dark">@Model.Id</span>
+                        <span class="text-muted small text-uppercase fw-bold"><i class="fa-solid fa-map-location-dot me-2"></i> Khu vực</span>
+                        <span class="badge bg-primary rounded-pill px-3">@Model.Area?.AreaName</span>
                     </div>
                 </div>
 

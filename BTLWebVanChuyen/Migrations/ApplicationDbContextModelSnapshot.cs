@@ -197,17 +197,39 @@ namespace BTLWebVanChuyen.Migrations
                     b.Property<int>("DeliveryAreaId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("DeliveryWarehouseId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("DispatcherId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("DistanceKm")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Payer")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaymentTransactionId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("PickupAddress")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PickupAreaId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PickupWarehouseId")
                         .HasColumnType("int");
 
                     b.Property<string>("ReceiverName")
@@ -240,9 +262,13 @@ namespace BTLWebVanChuyen.Migrations
 
                     b.HasIndex("DeliveryAreaId");
 
+                    b.HasIndex("DeliveryWarehouseId");
+
                     b.HasIndex("DispatcherId");
 
                     b.HasIndex("PickupAreaId");
+
+                    b.HasIndex("PickupWarehouseId");
 
                     b.HasIndex("ShipperId");
 
@@ -268,6 +294,9 @@ namespace BTLWebVanChuyen.Migrations
 
                     b.Property<DateTime>("Time")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -329,6 +358,32 @@ namespace BTLWebVanChuyen.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Reports");
+                });
+
+            modelBuilder.Entity("BTLWebVanChuyen.Models.Warehouse", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("AreaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
+
+                    b.ToTable("Warehouses");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -506,6 +561,10 @@ namespace BTLWebVanChuyen.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BTLWebVanChuyen.Models.Warehouse", "DeliveryWarehouse")
+                        .WithMany()
+                        .HasForeignKey("DeliveryWarehouseId");
+
                     b.HasOne("BTLWebVanChuyen.Models.Employee", "Dispatcher")
                         .WithMany("OrdersAsDispatcher")
                         .HasForeignKey("DispatcherId")
@@ -517,6 +576,10 @@ namespace BTLWebVanChuyen.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BTLWebVanChuyen.Models.Warehouse", "PickupWarehouse")
+                        .WithMany()
+                        .HasForeignKey("PickupWarehouseId");
+
                     b.HasOne("BTLWebVanChuyen.Models.Employee", "Shipper")
                         .WithMany("OrdersAsShipper")
                         .HasForeignKey("ShipperId")
@@ -526,9 +589,13 @@ namespace BTLWebVanChuyen.Migrations
 
                     b.Navigation("DeliveryArea");
 
+                    b.Navigation("DeliveryWarehouse");
+
                     b.Navigation("Dispatcher");
 
                     b.Navigation("PickupArea");
+
+                    b.Navigation("PickupWarehouse");
 
                     b.Navigation("Shipper");
                 });
@@ -548,6 +615,17 @@ namespace BTLWebVanChuyen.Migrations
                 {
                     b.HasOne("BTLWebVanChuyen.Models.Area", "Area")
                         .WithMany("PriceTables")
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Area");
+                });
+
+            modelBuilder.Entity("BTLWebVanChuyen.Models.Warehouse", b =>
+                {
+                    b.HasOne("BTLWebVanChuyen.Models.Area", "Area")
+                        .WithMany("Warehouses")
                         .HasForeignKey("AreaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -620,6 +698,8 @@ namespace BTLWebVanChuyen.Migrations
                     b.Navigation("PickupOrders");
 
                     b.Navigation("PriceTables");
+
+                    b.Navigation("Warehouses");
                 });
 
             modelBuilder.Entity("BTLWebVanChuyen.Models.Customer", b =>

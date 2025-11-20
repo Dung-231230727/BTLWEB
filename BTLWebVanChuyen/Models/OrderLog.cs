@@ -11,5 +11,6 @@
         public DateTime Time { get; set; } = DateTime.Now;
 
         public string? Note { get; set; }
+        public string? UpdatedBy { get; set; }
     }
 }

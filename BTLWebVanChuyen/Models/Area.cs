@@ -11,6 +11,9 @@
         public ICollection<Order>? PickupOrders { get; set; }
         public ICollection<Order>? DeliveryOrders { get; set; }
 
+        //kho
+        public ICollection<Warehouse>? Warehouses { get; set; }
+
         // Price
         public ICollection<PriceTable>? PriceTables { get; set; }
     }

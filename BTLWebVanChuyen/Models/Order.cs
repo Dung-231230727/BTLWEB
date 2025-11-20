@@ -48,8 +48,25 @@ namespace BTLWebVanChuyen.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice { get; set; } = 0;
 
+        //payment
+        public PayerType Payer { get; set; } = PayerType.Sender;
+        public string PaymentMethod { get; set; } = "COD"; // COD, Online
+        public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
+        public string? PaymentTransactionId { get; set; } = null;
+
+        //kho
+        public int? PickupWarehouseId { get; set; }
+        [ValidateNever]
+        public Warehouse? PickupWarehouse { get; set; }
+
+        public int? DeliveryWarehouseId { get; set; }
+        [ValidateNever]
+        public Warehouse? DeliveryWarehouse { get; set; }
+
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        //ghi chú
+        public string? FailureReason { get; set; }
 
         // Navigation
         public ICollection<OrderLog>? OrderLogs { get; set; }

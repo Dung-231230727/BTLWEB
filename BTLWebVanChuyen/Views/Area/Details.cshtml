@@ -1,5 +1,64 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model BTLWebVanChuyen.Models.Area
+
 @{
+    ViewData["Title"] = "Chi tiết khu vực";
 }
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-0 text-center">
+                <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                    <i class="fa-solid fa-map-location-dot fa-2x text-info"></i>
+                </div>
+                <h3 class="fw-bold text-dark">@ViewData["Title"]</h3>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <h2 class="text-primary fw-bold">@Model.AreaName</h2>
+                    <p class="text-muted">Thông tin chi tiết và danh sách kho trực thuộc</p>
+                </div>
+
+                <hr />
+
+                <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-boxes-stacked me-2"></i> Danh sách Kho hàng</h5>
+
+                @if (Model.Warehouses != null && Model.Warehouses.Any())
+                {
+                    <div class="list-group shadow-sm rounded-4">
+                        @foreach (var warehouse in Model.Warehouses)
+                        {
+                            <div class="list-group-item border-0 border-bottom p-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">@warehouse.Name</h6>
+                                    <small class="text-muted"><i class="fa-solid fa-location-dot me-1"></i> @warehouse.Address</small>
+                                </div>
+                                <a asp-controller="Warehouse" asp-action="Details" asp-route-id="@warehouse.Id" class="btn btn-sm btn-outline-primary rounded-pill">
+                                    Xem kho <i class="fa-solid fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning rounded-4 border-0 text-center">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i> Khu vực này chưa có kho hàng nào.
+                        <br />
+                        <a asp-controller="Warehouse" asp-action="Create" class="fw-bold text-decoration-none mt-2 d-inline-block">Thêm kho ngay</a>
+                    </div>
+                }
+
+                <div class="d-grid gap-2 mt-4">
+                    <div class="d-flex gap-2">
+                        <a asp-action="Edit" asp-route-id="@Model.AreaId" class="btn btn-warning flex-grow-1 rounded-pill fw-bold shadow-sm">
+                            <i class="fa-solid fa-pen-to-square me-2"></i>Chỉnh sửa
+                        </a>
+                        <a asp-action="Index" class="btn btn-light flex-grow-1 rounded-pill fw-bold text-secondary">Quay lại</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

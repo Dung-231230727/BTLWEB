@@ -18,10 +18,20 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
+// Trong Program.cs
 using (var scope = app.Services.CreateScope())
 {
-    // Change to synchronous call to avoid top-level await
-    SeedData.InitializeAsync(scope.ServiceProvider).GetAwaiter().GetResult();
+    var services = scope.ServiceProvider;
+    try
+    {
+        // G?i hàm InitializeAsync t? class DbInitializer
+        await DbInitializer.InitializeAsync(services);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "L?i khi kh?i t?o d? li?u m?u (Seeding DB).");
+    }
 }
 
 // Configure the HTTP request pipeline.

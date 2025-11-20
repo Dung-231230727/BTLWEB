@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BTLWebVanChuyen.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialCreate_V2_WithWarehouses : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -69,6 +69,23 @@ namespace BTLWebVanChuyen.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Reports",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ReportDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TotalOrders = table.Column<int>(type: "int", nullable: false),
+                    DeliveredOrders = table.Column<int>(type: "int", nullable: false),
+                    FailedOrders = table.Column<int>(type: "int", nullable: false),
+                    TotalRevenue = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Reports", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PriceTables",
                 columns: table => new
                 {
@@ -84,6 +101,27 @@ namespace BTLWebVanChuyen.Migrations
                     table.PrimaryKey("PK_PriceTables", x => x.Id);
                     table.ForeignKey(
                         name: "FK_PriceTables_Areas_AreaId",
+                        column: x => x.AreaId,
+                        principalTable: "Areas",
+                        principalColumn: "AreaId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Warehouses",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AreaId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Warehouses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Warehouses_Areas_AreaId",
                         column: x => x.AreaId,
                         principalTable: "Areas",
                         principalColumn: "AreaId",
@@ -224,11 +262,17 @@ namespace BTLWebVanChuyen.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Role = table.Column<int>(type: "int", nullable: false)
+                    Role = table.Column<int>(type: "int", nullable: false),
+                    AreaId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Employees", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Employees_Areas_AreaId",
+                        column: x => x.AreaId,
+                        principalTable: "Areas",
+                        principalColumn: "AreaId");
                     table.ForeignKey(
                         name: "FK_Employees_AspNetUsers_UserId",
                         column: x => x.UserId,
@@ -248,13 +292,23 @@ namespace BTLWebVanChuyen.Migrations
                     ShipperId = table.Column<int>(type: "int", nullable: true),
                     PickupAreaId = table.Column<int>(type: "int", nullable: false),
                     DeliveryAreaId = table.Column<int>(type: "int", nullable: false),
+                    TrackingCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ReceiverName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ReceiverPhone = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PickupAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DeliveryAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DistanceKm = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     WeightKg = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     TotalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Payer = table.Column<int>(type: "int", nullable: false),
+                    PaymentMethod = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PaymentStatus = table.Column<int>(type: "int", nullable: false),
+                    PaymentTransactionId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PickupWarehouseId = table.Column<int>(type: "int", nullable: true),
+                    DeliveryWarehouseId = table.Column<int>(type: "int", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    FailureReason = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -289,6 +343,16 @@ namespace BTLWebVanChuyen.Migrations
                         principalTable: "Employees",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Orders_Warehouses_DeliveryWarehouseId",
+                        column: x => x.DeliveryWarehouseId,
+                        principalTable: "Warehouses",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Orders_Warehouses_PickupWarehouseId",
+                        column: x => x.PickupWarehouseId,
+                        principalTable: "Warehouses",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -300,7 +364,8 @@ namespace BTLWebVanChuyen.Migrations
                     OrderId = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     Time = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Note = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Note = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -359,6 +424,11 @@ namespace BTLWebVanChuyen.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Employees_AreaId",
+                table: "Employees",
+                column: "AreaId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Employees_UserId",
                 table: "Employees",
                 column: "UserId",
@@ -380,6 +450,11 @@ namespace BTLWebVanChuyen.Migrations
                 column: "DeliveryAreaId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Orders_DeliveryWarehouseId",
+                table: "Orders",
+                column: "DeliveryWarehouseId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Orders_DispatcherId",
                 table: "Orders",
                 column: "DispatcherId");
@@ -390,6 +465,11 @@ namespace BTLWebVanChuyen.Migrations
                 column: "PickupAreaId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Orders_PickupWarehouseId",
+                table: "Orders",
+                column: "PickupWarehouseId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Orders_ShipperId",
                 table: "Orders",
                 column: "ShipperId");
@@ -397,6 +477,11 @@ namespace BTLWebVanChuyen.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PriceTables_AreaId",
                 table: "PriceTables",
+                column: "AreaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Warehouses_AreaId",
+                table: "Warehouses",
                 column: "AreaId");
         }
 
@@ -425,13 +510,13 @@ namespace BTLWebVanChuyen.Migrations
                 name: "PriceTables");
 
             migrationBuilder.DropTable(
+                name: "Reports");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "Orders");
-
-            migrationBuilder.DropTable(
-                name: "Areas");
 
             migrationBuilder.DropTable(
                 name: "Customers");
@@ -440,7 +525,13 @@ namespace BTLWebVanChuyen.Migrations
                 name: "Employees");
 
             migrationBuilder.DropTable(
+                name: "Warehouses");
+
+            migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "Areas");
         }
     }
 }

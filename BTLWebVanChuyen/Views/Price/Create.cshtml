@@ -1,60 +1,59 @@
 ﻿@model BTLWebVanChuyen.Models.PriceTable
-
 @{
-    ViewData["Title"] = "Thêm cước phí mới";
+    ViewData["Title"] = "Thêm bảng giá mới";
 }
 
 <div class="row justify-content-center mt-4">
-    <div class="col-md-8 col-lg-6">
+    <div class="col-md-6 col-lg-5">
         <div class="card shadow-lg border-0 rounded-4">
             <div class="card-header bg-white border-0 pt-4 pb-0 text-center">
-                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
-                    <i class="fa-solid fa-file-invoice-dollar fa-2x text-success"></i>
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                    <i class="fa-solid fa-money-bill-wave fa-2x text-primary"></i>
                 </div>
                 <h3 class="fw-bold text-dark">@ViewData["Title"]</h3>
-                <p class="text-muted">Thiết lập bảng giá cho khu vực vận chuyển</p>
+                <p class="text-muted">Thiết lập giá cước cho khu vực</p>
             </div>
 
             <div class="card-body p-4 pt-2">
                 <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+
                     <div class="mb-4">
                         <label class="form-label fw-bold text-secondary small text-uppercase">Khu vực áp dụng</label>
-                        <select asp-for="AreaId" asp-items="@(new SelectList(ViewBag.Areas, "AreaId", "AreaName"))" class="form-select bg-light border-0" style="height: 50px;">
+                        <select asp-for="AreaId" class="form-select bg-light" style="height: 50px;" asp-items="ViewBag.AreaId">
                             <option value="">-- Chọn khu vực --</option>
                         </select>
                         <span asp-validation-for="AreaId" class="text-danger small"></span>
                     </div>
 
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Giá mở cửa (Cơ bản)</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-money-bill text-muted"></i></span>
-                                <input asp-for="BasePrice" class="form-control bg-light border-start-0" placeholder="0" />
-                                <span class="input-group-text bg-light border-start-0 fw-bold text-secondary">VNĐ</span>
-                            </div>
-                            <span asp-validation-for="BasePrice" class="text-danger small"></span>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Giá mở cửa (VNĐ)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-door-open text-muted"></i></span>
+                            <input asp-for="BasePrice" class="form-control bg-light border-start-0" type="number" placeholder="VD: 15000" />
+                            <span class="input-group-text bg-light">đ</span>
                         </div>
+                        <span asp-validation-for="BasePrice" class="text-danger small"></span>
+                    </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Giá cước / km</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-road text-muted"></i></span>
-                                <input asp-for="PricePerKm" class="form-control bg-light border-start-0" placeholder="0" />
-                                <span class="input-group-text bg-light border-start-0 text-muted">/km</span>
-                            </div>
-                            <span asp-validation-for="PricePerKm" class="text-danger small"></span>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Đơn giá theo Km (VNĐ/km)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-road text-muted"></i></span>
+                            <input asp-for="PricePerKm" class="form-control bg-light border-start-0" type="number" placeholder="VD: 5000" />
+                            <span class="input-group-text bg-light">đ/km</span>
                         </div>
+                        <span asp-validation-for="PricePerKm" class="text-danger small"></span>
+                    </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Giá cước / kg</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-weight-hanging text-muted"></i></span>
-                                <input asp-for="WeightPrice" class="form-control bg-light border-start-0" placeholder="0" />
-                                <span class="input-group-text bg-light border-start-0 text-muted">/kg</span>
-                            </div>
-                            <span asp-validation-for="WeightPrice" class="text-danger small"></span>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Đơn giá theo Khối lượng (VNĐ/kg)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-weight-hanging text-muted"></i></span>
+                            <input asp-for="WeightPrice" class="form-control bg-light border-start-0" type="number" placeholder="VD: 2000" />
+                            <span class="input-group-text bg-light">đ/kg</span>
                         </div>
+                        <span asp-validation-for="WeightPrice" class="text-danger small"></span>
                     </div>
 
                     <div class="d-grid gap-2 mt-4">
@@ -73,4 +72,5 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
 }

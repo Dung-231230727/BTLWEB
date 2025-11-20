@@ -1,16 +1,16 @@
-﻿@model BTLWebVanChuyen.Models.Employee
+﻿@model BTLWebVanChuyen.Models.Warehouse
 @{
-    ViewData["Title"] = "Xóa nhân viên";
+    ViewData["Title"] = "Xóa kho hàng";
 }
 
 <div class="row justify-content-center mt-5">
     <div class="col-md-6 col-lg-5">
         <div class="text-center mb-4">
             <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                <i class="fa-solid fa-user-xmark fa-3x text-danger"></i>
+                <i class="fa-solid fa-trash-can fa-3x text-danger"></i>
             </div>
-            <h3 class="fw-bold text-dark">Xóa Nhân Viên?</h3>
-            <p class="text-muted px-4">Bạn có chắc chắn muốn xóa nhân viên này? Tài khoản đăng nhập và dữ liệu liên quan sẽ bị xóa vĩnh viễn.</p>
+            <h3 class="fw-bold text-dark">Xóa Kho Hàng?</h3>
+            <p class="text-muted px-4">Bạn có chắc chắn muốn xóa kho này? Nếu kho đang chứa đơn hàng, hành động này sẽ bị từ chối.</p>
             @if (ViewBag.Error != null)
             {
                 <div class="alert alert-danger shadow-sm border-0 rounded-3">@ViewBag.Error</div>
@@ -19,14 +19,14 @@
 
         <div class="card shadow-lg border-0 rounded-4 mb-4">
             <div class="card-body p-4">
-                <h5 class="text-center text-uppercase text-secondary fw-bold mb-4 border-bottom pb-3">Hồ sơ nhân viên</h5>
+                <h5 class="text-center text-uppercase text-secondary fw-bold mb-4 border-bottom pb-3">Thông tin kho cần xóa</h5>
                 <dl class="row g-2 text-center">
-                    <dt class="col-12 text-muted small text-uppercase">Họ tên</dt>
-                    <dd class="col-12 fw-bold fs-5 text-dark mb-3">@Model.User?.FullName</dd>
+                    <dt class="col-12 text-muted small text-uppercase">Tên kho</dt>
+                    <dd class="col-12 fw-bold fs-5 text-dark mb-3">@Model.Name</dd>
 
-                    <dt class="col-12 text-muted small text-uppercase">Vai trò & Khu vực</dt>
+                    <dt class="col-12 text-muted small text-uppercase">Địa chỉ & Khu vực</dt>
                     <dd class="col-12">
-                        <span class="badge bg-secondary me-1">@Model.Role</span>
+                        <span class="text-dark d-block mb-1">@Model.Address</span>
                         <span class="badge bg-info text-dark">@Model.Area?.AreaName</span>
                     </dd>
                 </dl>
@@ -37,7 +37,7 @@
             <form asp-action="Delete" method="post" class="flex-grow-1">
                 <input type="hidden" asp-for="Id" />
                 <button type="submit" class="btn btn-danger w-100 py-3 fw-bold rounded-pill shadow-sm hover-top">
-                    <i class="fa-solid fa-trash-can me-2"></i>Xác nhận Xóa
+                    <i class="fa-solid fa-check me-2"></i>Xác nhận Xóa
                 </button>
             </form>
             <a asp-action="Index" class="btn btn-light flex-grow-1 py-3 fw-bold rounded-pill text-secondary text-center text-decoration-none">Hủy bỏ</a>

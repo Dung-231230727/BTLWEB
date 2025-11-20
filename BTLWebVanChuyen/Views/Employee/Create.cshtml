@@ -11,41 +11,48 @@
                     <i class="fa-solid fa-user-plus fa-2x text-primary"></i>
                 </div>
                 <h3 class="fw-bold text-dark">@ViewData["Title"]</h3>
-                <p class="text-muted">Nhập thông tin để tạo tài khoản nhân viên mới</p>
+                <p class="text-muted">Tạo tài khoản và phân quyền nhân viên</p>
             </div>
 
             <div class="card-body p-4 pt-2">
                 <form asp-action="Create" method="post">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Họ và Tên</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user text-muted"></i></span>
-                                <input asp-for="User.FullName" class="form-control bg-light border-start-0" placeholder="Nhập họ tên đầy đủ" />
-                            </div>
-                            <span asp-validation-for="User.FullName" class="text-danger small"></span>
-                        </div>
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
 
-                        <div class="col-12">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Email</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-envelope text-muted"></i></span>
-                                <input asp-for="User.Email" class="form-control bg-light border-start-0" placeholder="email@example.com" />
-                            </div>
-                            <span asp-validation-for="User.Email" class="text-danger small"></span>
+                    <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">Thông tin cá nhân</h5>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Họ và Tên</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user text-muted"></i></span>
+                            <input name="User.FullName" class="form-control bg-light border-start-0" placeholder="Nhập họ tên đầy đủ" required />
                         </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Email (Tài khoản đăng nhập)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-envelope text-muted"></i></span>
+                            <input name="User.Email" type="email" class="form-control bg-light border-start-0" placeholder="email@example.com" required />
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Mật khẩu khởi tạo</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-lock text-muted"></i></span>
+                            <input name="User.PasswordHash" type="password" class="form-control bg-light border-start-0" required />
+                        </div>
+                    </div>
 
+                    <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">Phân quyền & Khu vực</h5>
+                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Vai trò</label>
-                            <select name="role" class="form-select bg-light">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Vai trò</label>
+                            <select name="Role" class="form-select bg-light" style="height: 50px;">
                                 <option value="Dispatcher">Nhân viên điều phối</option>
                                 <option value="Shipper">Nhân viên giao hàng</option>
                             </select>
                         </div>
-
                         <div class="col-md-6">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Khu vực quản lý</label>
-                            <select asp-for="AreaId" class="form-select bg-light" asp-items="@(ViewData["Areas"] as SelectList)">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Khu vực quản lý</label>
+                            <select asp-for="AreaId" class="form-select bg-light" style="height: 50px;" asp-items="ViewBag.Areas">
                                 <option value="">-- Chọn khu vực --</option>
                             </select>
                             <span asp-validation-for="AreaId" class="text-danger small"></span>
@@ -65,5 +72,8 @@
 </div>
 
 @section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
 }

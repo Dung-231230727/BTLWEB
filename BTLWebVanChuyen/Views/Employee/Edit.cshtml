@@ -1,4 +1,5 @@
 ﻿@model BTLWebVanChuyen.Models.Employee
+@using BTLWebVanChuyen.Models
 @{
     ViewData["Title"] = "Chỉnh sửa nhân viên";
 }
@@ -17,48 +18,41 @@
             <div class="card-body p-4 pt-2">
                 <form asp-action="Edit" method="post">
                     <input type="hidden" asp-for="Id" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
 
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Họ và Tên</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user text-muted"></i></span>
-                                <input asp-for="User.FullName" class="form-control bg-light border-start-0" />
-                            </div>
-                            <span asp-validation-for="User.FullName" class="text-danger small"></span>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Họ và Tên</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-signature text-muted"></i></span>
+                            <input asp-for="User.FullName" class="form-control bg-light border-start-0" />
                         </div>
+                        <span asp-validation-for="User.FullName" class="text-danger small"></span>
+                    </div>
 
-                        <div class="col-12">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Email</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-envelope text-muted"></i></span>
-                                <input asp-for="User.Email" class="form-control bg-light border-start-0" />
-                            </div>
-                            <span asp-validation-for="User.Email" class="text-danger small"></span>
-                        </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Email</label>
+                        <input asp-for="User.Email" class="form-control bg-light" readonly />
+                        <span class="text-muted small ms-1"><i class="fa-solid fa-circle-info"></i> Email không thể thay đổi.</span>
+                    </div>
 
+                    <h5 class="text-warning fw-bold mb-3 border-bottom pb-2">Cấu hình công việc</h5>
+                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Vai trò</label>
-                            <select asp-for="Role" class="form-select bg-light" asp-items="@(new SelectList(
-                                                                                                                                                                                                                                                                                    new[] {
-                                                                                                                                                                                                                                                                                        new { Value = "Dispatcher", Text = "Nhân viên điều phối" },
-                                                                                                                                                                                                                                                                                        new { Value = "Shipper", Text = "Nhân viên giao hàng" }
-                                                                                                                                                                                                                                                                                    }, "Value", "Text", Model.Role.ToString()
-                                                                                                                                                                                                                                                                                ))">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Vai trò</label>
+                            <select name="Role" class="form-select bg-light" style="height: 50px;">
+                                <!option value="Dispatcher" @(Model.Role == EmployeeRole.Dispatcher ? "selected" : "")>Nhân viên điều phối</!option>
+                                <!option value="Shipper" @(Model.Role == EmployeeRole.Shipper ? "selected" : "")>Nhân viên giao hàng</!option>
                             </select>
                         </div>
-
                         <div class="col-md-6">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Khu vực quản lý</label>
-                            <select asp-for="AreaId" class="form-select bg-light" asp-items="@(ViewData["Areas"] as SelectList)">
-                                <option value="">-- Chọn khu vực --</option>
-                            </select>
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Khu vực quản lý</label>
+                            <select asp-for="AreaId" class="form-select bg-light" style="height: 50px;" asp-items="ViewBag.Areas"></select>
                             <span asp-validation-for="AreaId" class="text-danger small"></span>
                         </div>
                     </div>
 
                     <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary py-3 rounded-pill fw-bold shadow-sm hover-top">
+                        <button type="submit" class="btn btn-warning py-3 rounded-pill fw-bold shadow-sm hover-top">
                             <i class="fa-solid fa-save me-2"></i>Lưu thay đổi
                         </button>
                         <a asp-action="Index" class="btn btn-light py-3 rounded-pill fw-bold text-secondary">Hủy bỏ</a>
@@ -70,5 +64,8 @@
 </div>
 
 @section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
 }
