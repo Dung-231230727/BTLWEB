@@ -61,6 +61,9 @@ namespace BTLWebVanChuyen.Controllers
         // ============================
         // Details (Xem chi tiết)
         // ============================
+        // ============================================================
+        // DETAILS: Xem chi tiết & Chuẩn bị dữ liệu phân quyền View
+        // ============================================================
         public async Task<IActionResult> Details(int id)
         {
             var order = await _context.Orders
@@ -69,13 +72,14 @@ namespace BTLWebVanChuyen.Controllers
                 .Include(o => o.Shipper).ThenInclude(s => s!.User)
                 .Include(o => o.PickupArea)
                 .Include(o => o.DeliveryArea)
-                .Include(o => o.PickupWarehouse)   // Load Kho Lấy
-                .Include(o => o.DeliveryWarehouse) // Load Kho Giao
+                .Include(o => o.PickupWarehouse)
+                .Include(o => o.DeliveryWarehouse)
                 .Include(o => o.OrderLogs)
                 .FirstOrDefaultAsync(o => o.Id == id);
 
             if (order == null) return NotFound();
 
+            // Nếu là Dispatcher, lấy thông tin để phân quyền hiển thị nút
             if (User.IsInRole("Dispatcher"))
             {
                 var user = await _userManager.GetUserAsync(User);
@@ -83,25 +87,34 @@ namespace BTLWebVanChuyen.Controllers
 
                 if (dispatcher != null)
                 {
-                    // 1. Lấy danh sách Shipper thuộc khu vực của Dispatcher
+                    // --- SỬA ĐỔI QUAN TRỌNG ---
+                    // Truyền AreaId của Dispatcher xuống View để ẩn/hiện nút
+                    ViewBag.CurrentDispatcherAreaId = dispatcher.AreaId;
+
+                    // Lấy danh sách Shipper & Kho thuộc khu vực CỦA DISPATCHER
                     ViewBag.Shippers = await _context.Employees
                         .Where(e => e.Role == EmployeeRole.Shipper && e.AreaId == dispatcher.AreaId)
                         .Include(e => e.User)
                         .ToListAsync();
 
-                    // 2. Lấy danh sách Kho thuộc khu vực của Dispatcher (Để chọn khi gán)
                     ViewBag.Warehouses = await _context.Warehouses
                         .Where(w => w.AreaId == dispatcher.AreaId)
                         .ToListAsync();
+
+                    if (order.PickupAreaId == dispatcher.AreaId && order.PickupAreaId != order.DeliveryAreaId)
+                    {
+                        ViewBag.DeliveryWarehouses = await _context.Warehouses
+                            .Where(w => w.AreaId == order.DeliveryAreaId)
+                            .ToListAsync();
+                    }
                 }
             }
-
             return View(order);
         }
 
-        // ============================
-        // LOGIC ĐIỀU PHỐI (ASSIGN)
-        // ============================
+        // ============================================================
+        // 1. LOGIC ĐIỀU PHỐI (ASSIGN) - CẬP NHẬT ĐIỀU KIỆN THANH TOÁN
+        // ============================================================
         [HttpPost, Authorize(Roles = "Dispatcher"), ValidateAntiForgeryToken]
         public async Task<IActionResult> Assign(int orderId, int shipperId, int? warehouseId)
         {
@@ -113,44 +126,39 @@ namespace BTLWebVanChuyen.Controllers
             if (order == null || shipper == null || dispatcher == null)
                 return Json(new { success = false, message = "Dữ liệu không hợp lệ." });
 
+            // Check thanh toán Online (Người gửi trả)
+            if (order.Payer == PayerType.Sender && order.PaymentMethod == "Online" && order.PaymentStatus != PaymentStatus.Paid)
+                return Json(new { success = false, message = "Đơn hàng chưa được thanh toán Online." });
+
             bool isSameArea = order.PickupAreaId == order.DeliveryAreaId;
 
-            // --- CASE 1: GÁN LẤY HÀNG (Tại khu vực lấy) ---
+            // --- GIAI ĐOẠN 1: GÁN LẤY HÀNG (Chỉ Dispatcher Khu vực Lấy được gán) ---
             if (order.Status == OrderStatus.Pending || order.Status == OrderStatus.PickupFailed)
             {
                 if (dispatcher.AreaId != order.PickupAreaId)
-                    return Json(new { success = false, message = "Bạn không phải Dispatcher khu vực lấy hàng." });
+                    return Json(new { success = false, message = "Bạn không có quyền điều phối lấy hàng (Khác khu vực)." });
+
                 if (shipper.AreaId != order.PickupAreaId)
                     return Json(new { success = false, message = "Shipper phải thuộc khu vực lấy hàng." });
 
-                if (warehouseId == null)
-                    return Json(new { success = false, message = "Vui lòng chọn Kho để nhập hàng sau khi lấy." });
+                if (warehouseId == null) return Json(new { success = false, message = "Vui lòng chọn Kho nhập." });
 
                 order.Status = OrderStatus.AssignedPickupShipper;
-                order.PickupWarehouseId = warehouseId; // Lưu kho nhập
+                order.PickupWarehouseId = warehouseId;
             }
-
-            // --- CASE 2: GÁN GIAO HÀNG (Tại khu vực giao) ---
+            // --- GIAI ĐOẠN 2: GÁN GIAO HÀNG (Chỉ Dispatcher Khu vực Giao được gán) ---
             else if (order.Status == OrderStatus.ArrivedDeliveryHub ||
                     (order.Status == OrderStatus.PickupSuccess && isSameArea) ||
                      order.Status == OrderStatus.DeliveryFailed)
             {
                 if (dispatcher.AreaId != order.DeliveryAreaId)
-                    return Json(new { success = false, message = "Bạn không phải Dispatcher khu vực giao hàng." });
+                    return Json(new { success = false, message = "Bạn không có quyền điều phối giao hàng (Khác khu vực)." });
+
                 if (shipper.AreaId != order.DeliveryAreaId)
                     return Json(new { success = false, message = "Shipper phải thuộc khu vực giao hàng." });
 
-                if (warehouseId == null)
-                {
-                    // Nếu cùng vùng, tự động lấy kho nhập làm kho xuất nếu không chọn
-                    if (isSameArea && order.PickupWarehouseId.HasValue)
-                        warehouseId = order.PickupWarehouseId;
-                    else
-                        return Json(new { success = false, message = "Vui lòng chọn Kho xuất hàng để đi giao." });
-                }
-
                 order.Status = OrderStatus.AssignedDeliveryShipper;
-                order.DeliveryWarehouseId = warehouseId; // Lưu kho xuất
+                order.DeliveryWarehouseId = warehouseId;
             }
             else
             {
@@ -160,31 +168,33 @@ namespace BTLWebVanChuyen.Controllers
             order.ShipperId = shipper.Id;
             order.DispatcherId = dispatcher.Id;
 
-            // Ghi log
+            // Log
             if (order.OrderLogs == null) order.OrderLogs = new List<OrderLog>();
             order.OrderLogs.Add(new OrderLog
             {
                 OrderId = order.Id,
                 Status = order.Status,
                 Time = DateTime.Now,
-                Note = $"Điều phối cho {shipper.User!.FullName} bởi {dispatcher.User!.FullName}",
+                Note = $"Điều phối bởi {dispatcher.User!.FullName}",
                 UpdatedBy = dispatcher.User.UserName
             });
 
             await _context.SaveChangesAsync();
 
+            var whName = await _context.Warehouses.Where(w => w.Id == warehouseId).Select(w => w.Name).FirstOrDefaultAsync();
             return Json(new
             {
                 success = true,
                 statusDisplay = order.Status.GetDisplayName(),
                 dispatcherName = dispatcher.User?.FullName,
-                shipperName = shipper.User?.FullName
+                shipperName = shipper.User?.FullName,
+                warehouseName = whName
             });
         }
 
-        // ============================
-        // LOGIC CẬP NHẬT TRẠNG THÁI (UPDATE STATUS)
-        // ============================
+        // ============================================================
+        // 2.UPDATE STATUS (SỬA LẠI LOGIC CHẶN)
+        // ============================================================
         [HttpPost, Authorize(Roles = "Shipper,Dispatcher"), ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateStatus(int orderId, OrderStatus status)
         {
@@ -194,45 +204,66 @@ namespace BTLWebVanChuyen.Controllers
 
             if (order == null) return Json(new { success = false, message = "Không tìm thấy đơn hàng" });
 
-            if (order.Status == OrderStatus.Delivered || order.Status == OrderStatus.Returned || order.Status == OrderStatus.Cancelled)
-                return Json(new { success = false, message = "Đơn hàng đã kết thúc." });
-
             bool isSameArea = order.PickupAreaId == order.DeliveryAreaId;
             var user = await _userManager.GetUserAsync(User);
             bool isValidTransition = false;
 
-            // --- SHIPPER ---
+            // --- A. LOGIC CỦA SHIPPER ---
             if (User.IsInRole("Shipper"))
             {
                 var currentEmployee = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
                 if (order.ShipperId != currentEmployee?.Id)
                     return Json(new { success = false, message = "Bạn không phải Shipper phụ trách." });
 
-                // 1. Lấy hàng
+                // --- 1. QUY TRÌNH LẤY HÀNG ---
                 if (order.Status == OrderStatus.AssignedPickupShipper && status == OrderStatus.Picking) isValidTransition = true;
-                else if (order.Status == OrderStatus.Picking && (status == OrderStatus.PickupSuccess || status == OrderStatus.PickupFailed)) isValidTransition = true;
-                // 2. Giao hàng
+                else if (order.Status == OrderStatus.Picking)
+                {
+                    if (status == OrderStatus.PickupFailed) isValidTransition = true;
+                    else if (status == OrderStatus.PickupSuccess)
+                    {
+                        // === CHẶN: Nếu Người gửi trả tiền mặt mà chưa thu => KHÔNG CHO UPDATE ===
+                        if (order.Payer == PayerType.Sender && order.PaymentMethod == "COD" && order.PaymentStatus != PaymentStatus.Paid)
+                        {
+                            return Json(new { success = false, message = "Bạn phải xác nhận 'Đã thu tiền' từ người gửi trước khi cập nhật Lấy thành công." });
+                        }
+                        isValidTransition = true;
+                    }
+                }
+
+                // --- 2. QUY TRÌNH GIAO HÀNG ---
                 else if (order.Status == OrderStatus.AssignedDeliveryShipper && status == OrderStatus.Delivering) isValidTransition = true;
-                else if (order.Status == OrderStatus.Delivering && (status == OrderStatus.Delivered || status == OrderStatus.DeliveryFailed)) isValidTransition = true;
-                // 3. Hoàn trả
+                else if (order.Status == OrderStatus.Delivering)
+                {
+                    if (status == OrderStatus.DeliveryFailed) isValidTransition = true;
+                    else if (status == OrderStatus.Delivered)
+                    {
+                        // === CHẶN: Nếu Người nhận trả (COD) mà chưa thu => KHÔNG CHO UPDATE ===
+                        if (order.Payer == PayerType.Receiver && order.PaymentStatus != PaymentStatus.Paid)
+                        {
+                            return Json(new { success = false, message = "Bạn phải xác nhận 'Đã thu tiền' từ người nhận trước khi cập nhật Giao thành công." });
+                        }
+                        isValidTransition = true;
+                    }
+                }
+
+                // --- 3. QUY TRÌNH HOÀN TRẢ ---
                 else if (order.Status == OrderStatus.Returning && (status == OrderStatus.Returned || status == OrderStatus.ReturnFailed)) isValidTransition = true;
             }
 
-            // --- DISPATCHER ---
+            // --- B. LOGIC CỦA DISPATCHER (Giữ nguyên) ---
             else if (User.IsInRole("Dispatcher"))
             {
-                // 1. Luân chuyển hàng
                 if (order.Status == OrderStatus.PickupSuccess && !isSameArea && status == OrderStatus.InterAreaTransporting) isValidTransition = true;
                 else if (order.Status == OrderStatus.InterAreaTransporting && status == OrderStatus.ArrivedDeliveryHub)
                 {
-                    order.ShipperId = null; // Xóa Shipper cũ
+                    order.ShipperId = null;
                     isValidTransition = true;
                 }
-                // 2. Xử lý sự cố
                 else if (status == OrderStatus.Cancelled || status == OrderStatus.Returning) isValidTransition = true;
             }
 
-            if (!isValidTransition) return Json(new { success = false, message = "Chuyển đổi trạng thái không hợp lệ." });
+            if (!isValidTransition) return Json(new { success = false, message = "Chuyển đổi trạng thái không hợp lệ hoặc thiếu điều kiện." });
 
             order.Status = status;
 
@@ -519,6 +550,123 @@ namespace BTLWebVanChuyen.Controllers
             else TempData["Error"] = "Sai chữ ký bảo mật.";
 
             return RedirectToAction("Details", new { id = orderId });
+        }
+
+        // ============================================================
+        // ACTION MỚI: SHIPPER XÁC NHẬN ĐÃ THU TIỀN COD
+        // ============================================================
+        [HttpPost, Authorize(Roles = "Shipper"), ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmCodCollection(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            var user = await _userManager.GetUserAsync(User);
+            var shipper = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
+
+            if (order == null || shipper == null) return Json(new { success = false, message = "Lỗi dữ liệu." });
+
+            // Kiểm tra quyền: Phải đúng shipper đang phụ trách
+            if (order.ShipperId != shipper.Id)
+                return Json(new { success = false, message = "Bạn không phụ trách đơn này." });
+
+            // Kiểm tra logic tiền
+            if (order.PaymentStatus == PaymentStatus.Paid)
+                return Json(new { success = false, message = "Đơn hàng đã được thanh toán trước đó." });
+
+            // Cập nhật đã thu tiền
+            order.PaymentStatus = PaymentStatus.Paid;
+            order.PaymentTransactionId = $"COD_COLLECTED_BY_{user!.UserName}_{DateTime.Now:yyyyMMddHHmmss}";
+
+            // Ghi log
+            if (order.OrderLogs == null) order.OrderLogs = new List<OrderLog>();
+            order.OrderLogs.Add(new OrderLog
+            {
+                OrderId = order.Id,
+                Status = order.Status,
+                Time = DateTime.Now,
+                Note = $"Shipper {user.FullName} xác nhận đã thu tiền COD.",
+                UpdatedBy = user.UserName
+            });
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+
+        // ============================================================
+        // 1. CUSTOMER: HỦY ĐƠN (LOGIC MỚI)
+        // ============================================================
+        [HttpPost, Authorize(Roles = "Customer"), ValidateAntiForgeryToken]
+        public async Task<IActionResult> Cancel(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            var user = await _userManager.GetUserAsync(User);
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user!.Id);
+
+            if (order == null || customer == null)
+                return Json(new { success = false, message = "Lỗi dữ liệu." });
+
+            // Kiểm tra quyền sở hữu
+            if (order.CustomerId != customer.Id)
+                return Json(new { success = false, message = "Bạn không sở hữu đơn hàng này." });
+
+            // Chỉ cho phép hủy khi đang chờ xử lý
+            if (order.Status != OrderStatus.Pending)
+                return Json(new { success = false, message = "Đơn hàng đã được tiếp nhận, không thể hủy." });
+
+            order.Status = OrderStatus.Cancelled;
+
+            if (order.OrderLogs == null) order.OrderLogs = new List<OrderLog>();
+            order.OrderLogs.Add(new OrderLog
+            {
+                OrderId = order.Id,
+                Status = OrderStatus.Cancelled,
+                Time = DateTime.Now,
+                Note = $"Khách hàng {user!.FullName} đã hủy đơn.",
+                UpdatedBy = user.UserName
+            });
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+
+        // ============================================================
+        // 2. START TRANSFER: Chọn kho đích & Bắt đầu vận chuyển
+        // ============================================================
+        [HttpPost, Authorize(Roles = "Dispatcher"), ValidateAntiForgeryToken]
+        public async Task<IActionResult> StartTransfer(int orderId, int deliveryWarehouseId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            var user = await _userManager.GetUserAsync(User);
+            var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
+
+            if (order == null || dispatcher == null) return Json(new { success = false, message = "Lỗi dữ liệu." });
+
+            // Check quyền: Chỉ Dispatcher khu vực LẤY mới được thực hiện
+            if (dispatcher.AreaId != order.PickupAreaId)
+                return Json(new { success = false, message = "Bạn không có quyền thực hiện chuyển hàng đi." });
+
+            if (order.Status != OrderStatus.PickupSuccess)
+                return Json(new { success = false, message = "Trạng thái đơn hàng không hợp lệ." });
+
+            // Cập nhật
+            order.Status = OrderStatus.InterAreaTransporting;
+            order.DeliveryWarehouseId = deliveryWarehouseId; // CHỐT KHO ĐÍCH TẠI ĐÂY
+
+            // Log
+            if (order.OrderLogs == null) order.OrderLogs = new List<OrderLog>();
+            order.OrderLogs.Add(new OrderLog
+            {
+                OrderId = order.Id,
+                Status = OrderStatus.InterAreaTransporting,
+                Time = DateTime.Now,
+                Note = $"Bắt đầu chuyển đến kho đích (ID: {deliveryWarehouseId})",
+                UpdatedBy = user!.UserName
+            });
+
+            await _context.SaveChangesAsync();
+
+            // Lấy tên kho để hiển thị alert (nếu cần)
+            var whName = await _context.Warehouses.Where(w => w.Id == deliveryWarehouseId).Select(w => w.Name).FirstOrDefaultAsync();
+            return Json(new { success = true, message = $"Đã bắt đầu vận chuyển đến {whName}" });
         }
     }
 }
