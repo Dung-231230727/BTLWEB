@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BTLWebVanChuyen.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Customer")]
     public class PriceController : Controller
     {
         private readonly ApplicationDbContext _context;
