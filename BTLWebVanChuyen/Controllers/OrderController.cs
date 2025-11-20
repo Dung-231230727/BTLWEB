@@ -566,6 +566,15 @@ namespace BTLWebVanChuyen.Controllers
 
             _context.Update(order);
             await _context.SaveChangesAsync();
+
+            // ===== THÔNG BÁO: Thêm thông báo khi đơn hàng được chỉnh sửa =====
+            var user = await _userManager.GetUserAsync(User);
+            var editorName = user?.FullName ?? user?.UserName ?? "Hệ thống";
+            
+            await NotifyOrderStakeholdersAsync(order,
+                $"Đơn {order.TrackingCode} đã được chỉnh sửa bởi {editorName}.",
+                user?.Id);
+
             return RedirectToAction("Details", new { id = order.Id });
         }
 
@@ -582,8 +591,45 @@ namespace BTLWebVanChuyen.Controllers
         [HttpPost, ActionName("Delete"), Authorize(Roles = "Admin"), ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var order = await _context.Orders.FindAsync(id);
-            if (order != null) { _context.Orders.Remove(order); await _context.SaveChangesAsync(); }
+            var order = await _context.Orders
+                .Include(o => o.Customer)
+                .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
+                .Include(o => o.Shipper).ThenInclude(s => s!.User)
+                .FirstOrDefaultAsync(o => o.Id == id);
+            
+            if (order != null)
+            {
+                // ===== THÔNG BÁO: Thêm thông báo trước khi xóa đơn hàng =====
+                var trackingCode = order.TrackingCode;
+                var recipients = new List<string>();
+
+                // Thông báo cho customer
+                var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
+                if (!string.IsNullOrWhiteSpace(customerUserId))
+                    recipients.Add(customerUserId);
+
+                // Thông báo cho dispatcher
+                var dispatcherUserId = await GetEmployeeUserIdAsync(order.DispatcherId);
+                if (!string.IsNullOrWhiteSpace(dispatcherUserId))
+                    recipients.Add(dispatcherUserId);
+
+                // Thông báo cho shipper
+                var shipperUserId = await GetEmployeeUserIdAsync(order.ShipperId);
+                if (!string.IsNullOrWhiteSpace(shipperUserId))
+                    recipients.Add(shipperUserId);
+
+                // Gửi thông báo cho tất cả các bên liên quan
+                if (recipients.Any())
+                {
+                    await CreateNotificationsAsync(recipients,
+                        $"Đơn hàng {trackingCode} đã bị xóa bởi quản trị viên.",
+                        null); // OrderId = null vì đơn đã bị xóa
+                }
+
+                _context.Orders.Remove(order);
+                await _context.SaveChangesAsync();
+            }
+            
             return RedirectToAction(nameof(Index));
         }
 
@@ -726,6 +772,25 @@ namespace BTLWebVanChuyen.Controllers
             });
 
             await _context.SaveChangesAsync();
+
+            // ===== THÔNG BÁO: Thêm thông báo khi shipper xác nhận đã thu tiền COD =====
+            var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
+            if (!string.IsNullOrWhiteSpace(customerUserId))
+            {
+                await CreateNotificationAsync(customerUserId,
+                    $"Shipper {user!.FullName} đã xác nhận thu tiền COD cho đơn {order.TrackingCode}.",
+                    order.Id);
+            }
+
+            // Thông báo cho dispatcher nếu có
+            var dispatcherUserId = await GetEmployeeUserIdAsync(order.DispatcherId);
+            if (!string.IsNullOrWhiteSpace(dispatcherUserId))
+            {
+                await CreateNotificationAsync(dispatcherUserId,
+                    $"Shipper {user!.FullName} đã xác nhận thu tiền COD cho đơn {order.TrackingCode}.",
+                    order.Id);
+            }
+
             return Json(new { success = true });
         }
 
@@ -763,6 +828,40 @@ namespace BTLWebVanChuyen.Controllers
             });
 
             await _context.SaveChangesAsync();
+
+            // ===== THÔNG BÁO: Thêm thông báo khi customer hủy đơn =====
+            var recipients = new List<string>();
+
+            // Thông báo cho dispatcher phụ trách khu vực lấy
+            var dispatcherUserIds = await GetDispatchersByAreaAsync(order.PickupAreaId);
+            recipients.AddRange(dispatcherUserIds);
+
+            // Nếu khu vực khác nhau, thông báo cho dispatcher khu vực giao
+            if (order.PickupAreaId != order.DeliveryAreaId)
+            {
+                var deliveryDispatcherUserIds = await GetDispatchersByAreaAsync(order.DeliveryAreaId);
+                recipients.AddRange(deliveryDispatcherUserIds);
+            }
+
+            // Thông báo cho dispatcher đã được gán (nếu có)
+            var assignedDispatcherUserId = await GetEmployeeUserIdAsync(order.DispatcherId);
+            if (!string.IsNullOrWhiteSpace(assignedDispatcherUserId) && !recipients.Contains(assignedDispatcherUserId))
+                recipients.Add(assignedDispatcherUserId);
+
+            // Thông báo cho shipper (nếu có)
+            var shipperUserId = await GetEmployeeUserIdAsync(order.ShipperId);
+            if (!string.IsNullOrWhiteSpace(shipperUserId))
+                recipients.Add(shipperUserId);
+
+            // Loại bỏ trùng lặp và gửi thông báo
+            recipients = recipients.Distinct().ToList();
+            if (recipients.Any())
+            {
+                await CreateNotificationsAsync(recipients,
+                    $"Đơn {order.TrackingCode} đã bị hủy bởi khách hàng {user.FullName}.",
+                    order.Id);
+            }
+
             return Json(new { success = true });
         }
 
@@ -802,8 +901,27 @@ namespace BTLWebVanChuyen.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Lấy tên kho để hiển thị alert (nếu cần)
+            // ===== THÔNG BÁO: Thêm thông báo khi bắt đầu vận chuyển liên khu vực =====
             var whName = await _context.Warehouses.Where(w => w.Id == deliveryWarehouseId).Select(w => w.Name).FirstOrDefaultAsync();
+            
+            // Thông báo cho customer
+            var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
+            if (!string.IsNullOrWhiteSpace(customerUserId))
+            {
+                await CreateNotificationAsync(customerUserId,
+                    $"Đơn {order.TrackingCode} đã bắt đầu vận chuyển đến kho {whName} (khu vực giao).",
+                    order.Id);
+            }
+
+            // Thông báo cho dispatcher khu vực giao
+            var deliveryDispatcherUserIds = await GetDispatchersByAreaAsync(order.DeliveryAreaId);
+            if (deliveryDispatcherUserIds.Any())
+            {
+                await CreateNotificationsAsync(deliveryDispatcherUserIds,
+                    $"Đơn {order.TrackingCode} đang được vận chuyển đến kho {whName} (khu vực của bạn).",
+                    order.Id);
+            }
+
             return Json(new { success = true, message = $"Đã bắt đầu vận chuyển đến {whName}" });
         }
     }
