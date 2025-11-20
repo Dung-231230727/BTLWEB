@@ -1,4 +1,6 @@
 ﻿@model BTLWebVanChuyen.Models.ViewModels.OrderViewModel
+@using BTLWebVanChuyen.Models
+@using BTLWebVanChuyen.Utility
 
 @{
     ViewData["Title"] = "Tạo đơn hàng mới";
@@ -63,6 +65,22 @@
                         </div>
                     </div>
 
+                    <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">3. Thanh toán</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Người trả cước</label>
+                            <select asp-for="Payer" class="form-select bg-light border-0" id="PayerSelect" style="height: 50px;"
+                                    asp-items="Html.GetEnumSelectList<PayerType>()"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Hình thức thanh toán</label>
+                            <select asp-for="PaymentMethod" class="form-select bg-light border-0" id="PaymentMethod" style="height: 50px;">
+                                <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+                                <option value="Online">Thanh toán Online (VNPay)</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="bg-primary bg-opacity-10 p-4 rounded-4 mb-4 text-center border border-primary border-opacity-25">
                         <h6 class="text-uppercase text-primary fw-bold mb-2">Tổng chi phí dự kiến</h6>
                         <input id="TotalPrice" class="form-control-plaintext text-center fw-bold display-6 text-dark" readonly value="0 VNĐ" />
@@ -80,7 +98,6 @@
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
-    @* SCRIPT GỐC: GIỮ NGUYÊN *@
     <script>
         const priceTables = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables))');
 
@@ -99,7 +116,6 @@
                 total += distance * (pickup.PricePerKm + delivery.PricePerKm);
                 total += weight * (pickup.WeightPrice + delivery.WeightPrice);
             }
-
             document.getElementById("TotalPrice").value = total.toLocaleString() + " VNĐ";
         }
 
@@ -107,5 +123,19 @@
         document.getElementById("DeliveryAreaId").addEventListener("change", calculateTotal);
         document.getElementById("DistanceKm").addEventListener("input", calculateTotal);
         document.getElementById("WeightKg").addEventListener("input", calculateTotal);
+
+        const payerSelect = document.getElementById('PayerSelect');
+        const paymentMethodSelect = document.getElementById("PaymentMethod");
+
+        function updatePaymentOptions() {
+            if (payerSelect.value === '2') { // Receiver pays
+                paymentMethodSelect.value = 'COD';
+                paymentMethodSelect.setAttribute('disabled', 'disabled');
+            } else {
+                paymentMethodSelect.removeAttribute('disabled');
+            }
+        }
+        payerSelect.addEventListener('change', updatePaymentOptions);
+        updatePaymentOptions();
     </script>
 }

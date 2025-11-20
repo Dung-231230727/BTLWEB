@@ -1,4 +1,6 @@
 ﻿@model BTLWebVanChuyen.Models.ViewModels.OrderViewModel
+@using BTLWebVanChuyen.Models
+@using BTLWebVanChuyen.Utility
 
 @{
     ViewData["Title"] = "Chỉnh sửa đơn hàng";
@@ -51,7 +53,7 @@
 
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold text-secondary small text-uppercase">Người nhận</label>
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Tên người nhận</label>
                             <input asp-for="Order.ReceiverName" class="form-control bg-light border-0" style="height: 50px;" />
                         </div>
                         <div class="col-md-6">
@@ -60,6 +62,26 @@
                         </div>
                     </div>
 
+                    @if (Model.Order.Status == OrderStatus.Pending)
+                    {
+                        <h5 class="text-warning fw-bold mb-3 border-bottom pb-2">Thông tin Thanh toán</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-secondary small text-uppercase">Người trả cước</label>
+                                <select asp-for="Order.Payer" class="form-select bg-light border-0" id="PayerSelectEdit" style="height: 50px;"
+                                        asp-items="Html.GetEnumSelectList<PayerType>()"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-secondary small text-uppercase">Hình thức thanh toán</label>
+                                <select asp-for="Order.PaymentMethod" class="form-select bg-light border-0" id="PaymentMethodEdit" style="height: 50px;">
+                                    <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+                                    <option value="Online">Thanh toán Online (VNPay)</option>
+                                </select>
+                                <script>document.addEventListener('DOMContentLoaded', function() {document.getElementById('PaymentMethodEdit').value = '@Model.Order.PaymentMethod';});</script>
+                            </div>
+                        </div>
+                    }
+
                     <div class="bg-warning bg-opacity-10 p-4 rounded-4 mb-4 text-center border border-warning border-opacity-25">
                         <h6 class="text-uppercase text-dark fw-bold mb-2">Tổng phí cập nhật</h6>
                         <input id="TotalPrice" class="form-control-plaintext text-center fw-bold display-6 text-dark" readonly value="@Model.Order.TotalPrice.ToString("N0")" />
@@ -67,7 +89,7 @@
 
                     <div class="d-flex gap-3">
                         <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-sm hover-top">Cập nhật</button>
-                        <a asp-action="Index" class="btn btn-light w-100 py-3 fw-bold rounded-pill text-secondary hover-top">Hủy bỏ</a>
+                        <a asp-action="Details" asp-route-id="@Model.Order.Id" class="btn btn-light w-100 py-3 fw-bold rounded-pill text-secondary hover-top">Hủy bỏ</a>
                     </div>
                 </form>
             </div>
@@ -77,7 +99,6 @@
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
-    @* SCRIPT GỐC GIỮ NGUYÊN *@
     <script>
         const priceTables = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables))');
 
@@ -96,7 +117,6 @@
                 total += distance * (pickup.PricePerKm + delivery.PricePerKm);
                 total += weight * (pickup.WeightPrice + delivery.WeightPrice);
             }
-
             document.getElementById("TotalPrice").value = total.toLocaleString();
         }
 

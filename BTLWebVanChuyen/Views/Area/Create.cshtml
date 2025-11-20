@@ -16,6 +16,8 @@
 
             <div class="card-body p-4 pt-2">
                 <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small"></div>
+
                     <div class="mb-4">
                         <label class="form-label fw-bold text-secondary small text-uppercase">Tên khu vực</label>
                         <div class="input-group">
@@ -41,4 +43,5 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
 }

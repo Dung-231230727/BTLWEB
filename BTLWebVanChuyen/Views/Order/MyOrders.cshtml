@@ -1,5 +1,6 @@
 ﻿@model IEnumerable<BTLWebVanChuyen.Models.Order>
 @using BTLWebVanChuyen.Utility
+@using BTLWebVanChuyen.Models
 @{
     ViewData["Title"] = "Đơn hàng của tôi";
 }
@@ -23,43 +24,39 @@
                         <th class="py-4 ps-4 text-secondary text-uppercase font-weight-bold small border-0">Mã vận đơn</th>
                         <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Điểm lấy</th>
                         <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Điểm giao</th>
-                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Điều phối</th>
-                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Shipper</th>
                         <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Trạng thái</th>
-                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Ngày tạo</th>
-                        <th class="py-4 pe-4 text-center text-secondary text-uppercase font-weight-bold small border-0">Chi tiết</th>
+                        <th class="py-4 pe-4 border-0"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var order in Model)
                     {
-                        <tr class="border-bottom">
-                            <td class="ps-4 py-3 fw-bold text-primary">@order.TrackingCode</td>
+                        <tr>
+                            <td class="py-3 ps-4 fw-bold text-primary">@order.TrackingCode</td>
                             <td class="text-muted">@order.PickupArea.AreaName</td>
                             <td class="text-muted">@order.DeliveryArea.AreaName</td>
-                            <td class="text-muted">@(order.Dispatcher?.User?.FullName ?? "---")</td>
-                            <td class="text-muted">@(order.Shipper?.User?.FullName ?? "---")</td>
                             <td>
-                                <span class="badge bg-success bg-opacity-10 text-dark border border-success rounded-pill px-3">
+                                <span class="badge bg-secondary rounded-pill px-3">
                                     @order.Status.GetDisplayName()
                                 </span>
                             </td>
-                            <td class="text-muted">@order.CreatedAt.ToString("dd/MM/yyyy")</td>
-                            <td class="pe-4 py-3 text-center">
-                                <a class="btn btn-outline-primary btn-sm rounded-pill px-3" asp-action="Details" asp-route-id="@order.Id">
-                                    Xem <i class="fa-solid fa-arrow-right ms-1"></i>
-                                </a>
+                            <td class="pe-4 py-3 text-center" style="width: 120px;">
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="btn-group shadow-sm w-100" role="group">
+                                        <a class="btn btn-light text-primary btn-sm" asp-action="Details" asp-route-id="@order.Id" title="Xem">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
-
         @if (!Model.Any())
         {
             <div class="text-center p-5">
-                <i class="fa-solid fa-box-open fa-3x text-muted mb-3"></i>
                 <p class="text-muted">Bạn chưa có đơn hàng nào.</p>
                 <a class="btn btn-primary rounded-pill fw-bold" asp-action="Create">Tạo đơn ngay</a>
             </div>

@@ -8,6 +8,10 @@
         public List<Area> pickupAreas { get; set; } = new List<Area>();
         public List<Area> deliveryAreas { get; set; } = new List<Area>();
 
+        //payment
+        public PayerType Payer { get; set; } = PayerType.Sender;
+        public string PaymentMethod { get; set; } = "COD"; // COD, Online
+
         // Thêm danh sách giá vận chuyển
         public List<PriceTableViewModel> PriceTables { get; set; } = new List<PriceTableViewModel>();
     }

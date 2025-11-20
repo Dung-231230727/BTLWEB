@@ -19,7 +19,7 @@ namespace BTLWebVanChuyen.Data
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderLog> OrderLogs { get; set; }
         public DbSet<Report> Reports { get; set; }
-
+        public DbSet<Warehouse> Warehouses { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
