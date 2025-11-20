@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BTLWebVanChuyen.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate_V2_WithWarehouses : Migration
+    public partial class v : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
