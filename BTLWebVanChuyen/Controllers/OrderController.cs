@@ -24,6 +24,89 @@ namespace BTLWebVanChuyen.Controllers
         }
 
         // ============================
+        // HÀM TIỆN ÍCH: Tạo thông báo
+        // ============================
+        private Task CreateNotificationAsync(string userId, string message, int? orderId = null)
+        {
+            if (string.IsNullOrWhiteSpace(userId)) return Task.CompletedTask;
+            return CreateNotificationsAsync(new[] { userId }, message, orderId);
+        }
+
+        private async Task CreateNotificationsAsync(IEnumerable<string> userIds, string message, int? orderId = null)
+        {
+            var recipients = userIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
+                .ToList();
+
+            if (!recipients.Any() || string.IsNullOrWhiteSpace(message))
+                return;
+
+            foreach (var uid in recipients)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = uid,
+                    Message = message,
+                    OrderId = orderId,
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                });
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task<string?> GetCustomerUserIdAsync(int customerId)
+        {
+            return await _context.Customers
+                .Where(c => c.Id == customerId)
+                .Select(c => c.UserId)
+                .FirstOrDefaultAsync();
+        }
+
+        private async Task<string?> GetEmployeeUserIdAsync(int? employeeId)
+        {
+            if (!employeeId.HasValue) return null;
+
+            return await _context.Employees
+                .Where(e => e.Id == employeeId.Value)
+                .Select(e => e.UserId)
+                .FirstOrDefaultAsync();
+        }
+
+        private async Task<List<string>> GetDispatchersByAreaAsync(int areaId)
+        {
+            return await _context.Employees
+                .Where(e => e.Role == EmployeeRole.Dispatcher && e.AreaId == areaId)
+                .Select(e => e.UserId)
+                .ToListAsync();
+        }
+
+        private async Task NotifyOrderStakeholdersAsync(Order order, string message, string? excludeUserId = null)
+        {
+            var recipients = new List<string>();
+
+            var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
+            if (!string.IsNullOrWhiteSpace(customerUserId)) recipients.Add(customerUserId);
+
+            var dispatcherUserId = await GetEmployeeUserIdAsync(order.DispatcherId);
+            if (!string.IsNullOrWhiteSpace(dispatcherUserId)) recipients.Add(dispatcherUserId);
+
+            var shipperUserId = await GetEmployeeUserIdAsync(order.ShipperId);
+            if (!string.IsNullOrWhiteSpace(shipperUserId)) recipients.Add(shipperUserId);
+
+            if (!string.IsNullOrWhiteSpace(excludeUserId))
+            {
+                recipients = recipients.Where(id => id != excludeUserId).ToList();
+            }
+
+            if (!recipients.Any()) return;
+
+            await CreateNotificationsAsync(recipients, message, order.Id);
+        }
+
+        // ============================
         // ADMIN + DISPATCHER + Shipper: Danh sách đơn
         // ============================
         [Authorize(Roles = "Admin,Dispatcher,Shipper")]
@@ -173,6 +256,25 @@ namespace BTLWebVanChuyen.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Gửi thông báo cho Shipper và Khách hàng
+            var shipperMessage = order.Status == OrderStatus.AssignedPickupShipper
+                ? $"Bạn vừa được giao lấy đơn {order.TrackingCode} tại {order.PickupAddress}."
+                : $"Bạn vừa được giao giao đơn {order.TrackingCode} cho {order.ReceiverName} ({order.DeliveryAddress}).";
+            await CreateNotificationAsync(shipper.UserId,
+                shipperMessage,
+                order.Id);
+
+            var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
+            if (!string.IsNullOrWhiteSpace(customerUserId))
+            {
+                var customerMessage = order.Status == OrderStatus.AssignedPickupShipper
+                    ? $"Đơn {order.TrackingCode} đã được gán cho shipper {shipper.User!.FullName} để lấy hàng."
+                    : $"Đơn {order.TrackingCode} đã được gán cho shipper {shipper.User!.FullName} để giao cho người nhận.";
+                await CreateNotificationAsync(customerUserId,
+                    customerMessage,
+                    order.Id);
+            }
+
             return Json(new
             {
                 success = true,
@@ -247,7 +349,14 @@ namespace BTLWebVanChuyen.Controllers
             });
 
             await _context.SaveChangesAsync();
-            return Json(new { success = true, statusDisplay = order.Status.GetDisplayName() });
+
+            var statusDisplay = order.Status.GetDisplayName();
+            var actorUserId = user?.Id;
+            await NotifyOrderStakeholdersAsync(order,
+                $"Đơn {order.TrackingCode} vừa chuyển sang trạng thái {statusDisplay}.",
+                actorUserId);
+
+            return Json(new { success = true, statusDisplay });
         }
 
         // ============================
@@ -263,6 +372,14 @@ namespace BTLWebVanChuyen.Controllers
                 order.PaymentMethod = "COD";
                 order.PaymentTransactionId = $"COD_{DateTime.Now:yyyyMMddHHmmss}";
                 await _context.SaveChangesAsync();
+
+                var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
+                if (!string.IsNullOrWhiteSpace(customerUserId))
+                {
+                    await CreateNotificationAsync(customerUserId,
+                        $"Đơn {order.TrackingCode} đã được xác nhận thu COD thành công.",
+                        order.Id);
+                }
                 return Json(new { success = true });
             }
             return Json(new { success = false, message = "Trạng thái đơn hàng không hợp lệ." });
@@ -328,6 +445,19 @@ namespace BTLWebVanChuyen.Controllers
             order.TrackingCode = $"MVD{order.CreatedAt:ddMMyyyy}{order.Id:D4}";
             _context.Orders.Update(order);
             await _context.SaveChangesAsync();
+
+            // Gửi thông báo tới khách hàng và Dispatcher phụ trách khu vực lấy
+            await CreateNotificationAsync(customer.UserId,
+                $"Đơn hàng {order.TrackingCode} đã được tạo thành công. Chúng tôi sẽ xử lý ngay.",
+                order.Id);
+
+            var dispatcherUserIds = await GetDispatchersByAreaAsync(order.PickupAreaId);
+            if (dispatcherUserIds.Any())
+            {
+                await CreateNotificationsAsync(dispatcherUserIds,
+                    $"Có đơn hàng mới {order.TrackingCode} cần điều phối tại khu vực của bạn.",
+                    order.Id);
+            }
 
             return RedirectToAction("Details", new { id = order.Id });
         }
@@ -502,6 +632,14 @@ namespace BTLWebVanChuyen.Controllers
                         order.PaymentTransactionId = vnpay.GetResponseData("vnp_TransactionNo");
                         _context.Update(order);
                         await _context.SaveChangesAsync();
+
+                        var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
+                        if (!string.IsNullOrWhiteSpace(customerUserId))
+                        {
+                            await CreateNotificationAsync(customerUserId,
+                                $"Thanh toán Online cho đơn {order.TrackingCode} đã thành công.",
+                                order.Id);
+                        }
                         TempData["Message"] = "Thanh toán thành công.";
                     }
                 }

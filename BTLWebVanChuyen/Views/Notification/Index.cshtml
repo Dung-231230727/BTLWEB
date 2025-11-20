@@ -1,0 +1,59 @@
+﻿@model IEnumerable<BTLWebVanChuyen.Models.Notification>
+
+@{
+    ViewData["Title"] = "Thông báo";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="mb-0"><i class="fa-solid fa-bell me-2"></i>Thông báo của bạn</h2>
+            <form asp-action="MarkAllAsRead" method="post">
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                    <i class="fa-solid fa-check-double me-1"></i> Đánh dấu tất cả đã đọc
+                </button>
+            </form>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="alert alert-info">
+                Hiện tại bạn chưa có thông báo nào.
+            </div>
+        }
+        else
+        {
+            <ul class="list-group shadow-sm">
+                @foreach (var n in Model)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-start @(n.IsRead ? "" : "list-group-item-warning")">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">
+                                @(n.IsRead ? "" : "[Mới] ") @n.Message
+                            </div>
+                            <small class="text-muted">@n.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            @if (!n.IsRead)
+                            {
+                                <form asp-action="MarkAsRead" method="post" class="ms-2">
+                                    <input type="hidden" name="id" value="@n.NotificationId" />
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Đánh dấu đã đọc</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form asp-action="MarkAsUnread" method="post" class="ms-2">
+                                    <input type="hidden" name="id" value="@n.NotificationId" />
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">Đánh dấu chưa đọc</button>
+                                </form>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+

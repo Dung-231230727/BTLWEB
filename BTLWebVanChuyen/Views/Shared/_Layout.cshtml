@@ -1,11 +1,25 @@
 ﻿@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+@using System.Linq
 @inject SignInManager<BTLWebVanChuyen.Models.ApplicationUser> SignInManager
+@inject BTLWebVanChuyen.Data.ApplicationDbContext DbContext
 
 @{
     // LOGIC GỐC: GIỮ NGUYÊN
     var isAuthenticated = SignInManager.IsSignedIn(User);
     var userName = User?.Identity?.Name ?? "";
     var title = ViewData["Title"]?.ToString() ?? "BTLWebVanChuyen";
+    var unreadNotifications = 0;
+
+    // Lấy số lượng thông báo chưa đọc cho người dùng đã đăng nhập
+    if (isAuthenticated)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            unreadNotifications = DbContext.Notifications.Count(n => n.UserId == userId && !n.IsRead);
+        }
+    }
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -136,9 +150,20 @@
                     </ul>
 
                     @* RIGHT SIDE - Auth Button *@
-                    <div class="ms-lg-4">
+                    <div class="ms-lg-4 d-flex align-items-center gap-3">
                         @if (isAuthenticated)
                         {
+                            @* Icon thông báo *@
+                            <a asp-controller="Notification" asp-action="Index" class="btn btn-outline-secondary position-relative me-2">
+                                <i class="fa-solid fa-bell"></i>
+                                @if (unreadNotifications > 0)
+                                {
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        @unreadNotifications
+                                    </span>
+                                }
+                            </a>
+
                             <div class="dropdown">
                                 <button class="btn btn-primary py-2 px-4 d-flex align-items-center dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown">
                                     <i class="fa-solid fa-user me-2"></i> @userName
