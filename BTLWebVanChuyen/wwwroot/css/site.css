@@ -1,23 +1,23 @@
 /* ========================================================================= */
-/* 1. �?NH NGH?A BI?N M�U S?C V� FONT (THEME PASTEL & HI?N �?I) */
+/* 1. Ð?NH NGH?A BI?N MÀU S?C VÀ FONT (THEME PASTEL & HI?N Ð?I) */
 /* ========================================================================= */
 :root {
-    /* M�u Ch? �?o (Primary): Xanh Pastel Nh?t - cho c�c CTA, link ch�nh */
+    /* Màu Ch? Ð?o (Primary): Xanh Pastel Nh?t - cho các CTA, link chính */
     --color-primary: #66D9EF; /* Light Cyan */
-    --color-primary-dark: #37B3C3; /* D�ng cho hover/active */
-    /* M�u Nh?n (Accent): H?ng Pastel Nh?t - cho highlight, th�ng b�o, icon */
+    --color-primary-dark: #37B3C3; /* Dùng cho hover/active */
+    /* Màu Nh?n (Accent): H?ng Pastel Nh?t - cho highlight, thông báo, icon */
     --color-accent: #FFB8D9; /* Light Pink */
-    /* M�u N?n/Tr?ng: N?n s?ch s?, nhi?u kho?ng tr?ng */
+    /* Màu N?n/Tr?ng: N?n s?ch s?, nhi?u kho?ng tr?ng */
     --color-background: #F8F9FA; /* R?t nh?t, g?n tr?ng */
     --color-white: #FFFFFF;
-    /* M�u Ch?: �?m b?o d? �?c tr�n n?n s�ng */
-    --color-text: #343A40; /* �en g?n */
-    --color-text-muted: #6C757D; /* X�m cho c�c ghi ch� nh? */
-    /* M�u cho Dashboard (N?n Sidebar, ti�u �? Card) */
+    /* Màu Ch?: Ð?m b?o d? ð?c trên n?n sáng */
+    --color-text: #343A40; /* Ðen g?n */
+    --color-text-muted: #6C757D; /* Xám cho các ghi chú nh? */
+    /* Màu cho Dashboard (N?n Sidebar, tiêu ð? Card) */
     --color-dashboard-bg: #EAECEE;
-    /* Font ch? hi?n �?i, Sans-serif, d? �?c */
+    /* Font ch? hi?n ð?i, Sans-serif, d? ð?c */
     --font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
-    /* Shadow/B�ng �? nh? */
+    /* Shadow/Bóng ð? nh? */
     --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
@@ -46,17 +46,17 @@ body {
 }
 
 /* ========================================================================= */
-/* 3. �I?U CH?NH TH�NH PH?N BOOTSTRAP */
+/* 3. ÐI?U CH?NH THÀNH PH?N BOOTSTRAP */
 /* ========================================================================= */
 
-/* M�u cho c�c th? (Card) */
+/* Màu cho các th? (Card) */
 .card, .p-5.text-center.bg-white {
     border: none;
     border-radius: 12px;
     box-shadow: var(--box-shadow);
 }
 
-/* N�t b?m (Buttons) */
+/* Nút b?m (Buttons) */
 .btn-primary, .btn-info {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
@@ -68,7 +68,7 @@ body {
         border-color: var(--color-primary-dark);
     }
 
-/* Li�n k?t (Links) */
+/* Liên k?t (Links) */
 a {
     color: var(--color-primary);
     text-decoration: none;
@@ -96,24 +96,24 @@ a {
 }
 
 .table-hover > tbody > tr:hover {
-    --bs-table-bg-hover: var(--color-dashboard-bg); /* Hover m�u x�m nh?t */
+    --bs-table-bg-hover: var(--color-dashboard-bg); /* Hover màu xám nh?t */
 }
 
 .table thead th {
-    background-color: var(--color-dashboard-bg); /* Header B?ng m�u x�m pastel */
+    background-color: var(--color-dashboard-bg); /* Header B?ng màu xám pastel */
     font-weight: 600;
     color: var(--color-text);
 }
 
-/* Badges (Tags tr?ng th�i) */
+/* Badges (Tags tr?ng thái) */
 .badge {
     padding: 0.5em 0.8em;
-    border-radius: 50rem; /* Bo tr?n ho�n to�n */
+    border-radius: 50rem; /* Bo tr?n hoàn toàn */
     font-weight: 500;
 }
 
 /* ========================================================================= */
-/* 4. T�Y CH?NH CHUNG CHO C�C KHU V?C */
+/* 4. TÙY CH?NH CHUNG CHO CÁC KHU V?C */
 /* ========================================================================= */
 
 /* Header (Navbar) */
@@ -127,4 +127,108 @@ a {
     background-color: var(--color-white) !important;
     border-top: 1px solid var(--color-dashboard-bg) !important;
     padding: 1rem 0;
+}
+/* Chỗ này chỉnh hover với hiệu ứng trượt=========================================================*/
+/* Hiệu ứng gạch chân trượt và zoom */
+.nav-link {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+    transition: transform 0.25s ease; /* chỉ còn zoom */
+}
+
+    .nav-link::after {
+        content: "";
+        position: absolute;
+        bottom: 5px;
+        left: 50%;
+        width: 0%;
+        height: 2px;
+        background: #0d6efd;
+        transition: all 0.3s ease;
+    }
+
+    /* Hover: zoom và gạch chạy */
+    .nav-link:hover {
+        transform: scale(1.15); /* phóng to */
+    }
+
+        .nav-link:hover::after {
+            left: 0;
+            width: 100%;
+        }
+
+@media (min-width: 992px) {
+    .navbar-nav .dropdown:hover .dropdown-menu {
+        display: block; /* Hiện menu */
+        margin-top: 0; /* Xóa khoảng cách để chuột di chuyển mượt hơn */
+    }
+}
+
+
+/*Menu Drop*/
+.dropdown-menu {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.25s ease;
+}
+
+.dropdown:hover .dropdown-menu {
+    opacity: 1;
+    transform: translateY(0);
+}
+/*Hover logo*/
+.navbar-brand {
+    transition: transform 0.3s ease;
+}
+
+    .navbar-brand:hover {
+        transform: scale(1.08);
+    }
+
+/*Nút login*/
+.btn-primary {
+    transition: all 0.25s ease;
+}
+
+    .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 18px rgba(0, 123, 255, 0.35);
+    }
+/*Hover icon mạng xã hội – xoay + fade*/
+.btn-social i {
+    transition: all 0.3s ease;
+}
+
+.btn-social:hover i {
+    transform: rotate(15deg) scale(1.2);
+}
+/*Hover topbar icons – đổi màu mượt*/
+.topbar a {
+    transition: color 0.25s ease;
+}
+
+    .topbar a:hover {
+        color: #0d6efd !important;
+    }
+
+/*Nút tra cứu*/
+/* Áp dụng cho nút 'btn-dark' của bạn */
+.btn-dark {
+    /* Thiết lập transition cơ bản để hiệu ứng mượt mà */
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+}
+
+    .btn-dark:hover {
+        background-color: #343a40;
+        /* Hiệu ứng dịch chuyển/zoom nhẹ lên trên (để nút nổi lên) */
+        transform: translateY(-2px);
+        /* Thêm shadow để làm nổi bật */
+        box-shadow: 0 4px 10px rgba(52, 58, 64, 0.4);
+    }
+
+/* Đảm bảo trạng thái mặc định của nút 'Tra cứu' (nếu cần) */
+.btn-dark {
+    background-color: #212529; /* Màu đen mặc định */
+    color: #ffffff; /* Màu chữ trắng mặc định */
 }
