@@ -46,6 +46,25 @@
             font-size: 0.85rem;
         }
         /* Màu Dark của Template */
+
+        .navbar-nav .dropdown-toggle::after {
+            content: none !important; /* Xóa nội dung mũi tên */
+            display: none !important;
+        }
+
+        /* Trạng thái ẩn/chuẩn bị hiện ra */
+        .reveal-item {
+            opacity: 0;
+            transform: translateY(20px); /* Dịch chuyển từ dưới lên 20px */
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out; /* Chuyển đổi mượt mà */
+            will-change: opacity, transform; /* Tăng hiệu năng */
+        }
+
+        /* Trạng thái đã hiện ra (khi class 'revealed' được thêm vào bằng JS) */
+        .reveal-item.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
@@ -176,13 +195,13 @@
             @* Logic thông báo giữ nguyên *@
             @if (!string.IsNullOrEmpty(ViewBag.Message))
             {
-                <div class="container mt-4">
+                <div class="container mt-4 reveal-item">
                     <div class="alert alert-info shadow-sm border-0" role="alert"><i class="fa-solid fa-bell me-2"></i> @ViewBag.Message</div>
                 </div>
             }
 
             @* Nội dung chính *@
-            <div class="container py-5">
+            <div class="container py-5 reveal-item">
                 @RenderBody()
             </div>
         </main>
