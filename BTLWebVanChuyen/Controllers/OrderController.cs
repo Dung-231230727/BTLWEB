@@ -282,7 +282,8 @@ namespace BTLWebVanChuyen.Controllers
                     customerMessage,
                     order.Id);
             }
-
+            
+            var whName = await _context.Warehouses.Where(w => w.Id == warehouseId).Select(w => w.Name).FirstOrDefaultAsync();
             return Json(new
             {
                 success = true,
