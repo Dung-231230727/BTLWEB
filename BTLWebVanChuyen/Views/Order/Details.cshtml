@@ -299,13 +299,7 @@
             </div>
 
             <div class="card-footer bg-light p-3 text-center rounded-bottom-4">
-                @{
-                    string backController = "Order";
-                    string backAction = "Index";
-                    if (!User.Identity!.IsAuthenticated) { backController = "Home"; backAction = "Index"; }
-                    else if (User.IsInRole("Customer")) { backController = "Order"; backAction = "MyOrders"; }
-                }
-                <a asp-controller="@backController" asp-action="@backAction" class="btn btn-outline-secondary rounded-pill px-4 fw-bold hover-top">
+                <a id ="backBtn" class="btn btn-outline-secondary rounded-pill px-4 fw-bold hover-top">
                     <i class="fa-solid fa-arrow-left me-2"></i>Quay lại
                 </a>
             </div>
