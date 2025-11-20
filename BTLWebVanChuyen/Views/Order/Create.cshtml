@@ -34,23 +34,55 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-bold text-secondary small text-uppercase">Địa chỉ lấy chi tiết</label>
-                        <input asp-for="Order.PickupAddress" class="form-control bg-light border-0" placeholder="Số nhà, tên đường..." style="height: 50px;" />
+                        <div class="position-relative">
+                            <input asp-for="Order.PickupAddress" id="txtOrigin" class="form-control bg-light border-0"
+                                   placeholder="Gõ địa chỉ (VD: Đại học Công nghiệp...)" style="height: 50px;"
+                                   list="suggestOrigin"
+                                   oninput="handleInput(this, 'suggestOrigin')"
+                                   onchange="autoCalculate()"
+                                   autocomplete="off" />
+
+                            <datalist id="suggestOrigin"></datalist>
+
+                            <span id="loadingOrigin" class="position-absolute top-50 end-0 translate-middle-y me-3 text-primary" style="display:none">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                            </span>
+                        </div>
                     </div>
 
                     <div class="mb-4">
                         <label class="form-label fw-bold text-secondary small text-uppercase">Địa chỉ giao chi tiết</label>
-                        <input asp-for="Order.DeliveryAddress" class="form-control bg-light border-0" placeholder="Số nhà, tên đường..." style="height: 50px;" />
+                        <div class="position-relative">
+                            <input asp-for="Order.DeliveryAddress" id="txtDestination" class="form-control bg-light border-0"
+                                   placeholder="Gõ địa chỉ (VD: Hồ Gươm...)" style="height: 50px;"
+                                   list="suggestDest"
+                                   oninput="handleInput(this, 'suggestDest')"
+                                   onchange="autoCalculate()"
+                                   autocomplete="off" />
+
+                            <datalist id="suggestDest"></datalist>
+
+                            <span id="loadingDest" class="position-absolute top-50 end-0 translate-middle-y me-3 text-primary" style="display:none">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                            </span>
+                        </div>
                     </div>
 
-                    <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">2. Thông tin Hàng hóa & Người nhận</h5>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-secondary small text-uppercase">Khoảng cách (km)</label>
-                            <input asp-for="Order.DistanceKm" class="form-control bg-light border-0" id="DistanceKm" type="number" step="0.1" style="height: 50px;" />
+                            <div class="input-group">
+                                <input asp-for="Order.DistanceKm" class="form-control bg-light border-0" id="DistanceKm" type="number" step="0.1" style="height: 50px;" placeholder="0" readonly />
+                                <span class="input-group-text bg-light border-0" id="statusIcon">
+                                    <i class="fa-solid fa-route text-secondary"></i>
+                                </span>
+                            </div>
+                            <small id="mapStatus" class="text-muted fst-italic" style="font-size: 12px;">Nhập đủ 2 địa chỉ để tự tính km</small>
                         </div>
+
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-secondary small text-uppercase">Trọng lượng (kg)</label>
-                            <input asp-for="Order.WeightKg" class="form-control bg-light border-0" id="WeightKg" type="number" step="0.1" style="height: 50px;" />
+                            <input asp-for="Order.WeightKg" class="form-control bg-light border-0" id="WeightKg" type="number" step="0.1" min="0" style="height: 50px;" />
                         </div>
                     </div>
 
@@ -88,7 +120,7 @@
 
                     <div class="d-flex gap-3">
                         <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-sm hover-top">Tạo đơn hàng</button>
-                        <a asp-action="Index" class="btn btn-light w-100 py-3 fw-bold rounded-pill text-secondary hover-top">Hủy bỏ</a>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-light w-100 py-3 fw-bold rounded-pill text-secondary hover-top">Hủy bỏ</a>
                     </div>
                 </form>
             </div>
@@ -96,7 +128,7 @@
     </div>
 </div>
 
-@section Scripts {
+@* @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
     <script>
         const priceTables = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables))');
@@ -138,4 +170,211 @@
         payerSelect.addEventListener('change', updatePaymentOptions);
         updatePaymentOptions();
     </script>
+} *@
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+
+    <script>
+        // --- 1. CẤU HÌNH & BIẾN TOÀN CỤC ---
+        const priceTables = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables))');
+        let timeoutSuggest;
+
+        // Cache các element để đỡ phải tìm lại nhiều lần (Tối ưu hiệu năng)
+        const elOrigin = document.getElementById('txtOrigin');
+        const elDest = document.getElementById('txtDestination');
+        const elDist = document.getElementById('DistanceKm');
+        const elWeight = document.getElementById('WeightKg');
+        const elPrice = document.getElementById("TotalPrice");
+        const elStatus = document.getElementById('mapStatus');
+        const elIcon = document.getElementById('statusIcon');
+
+        // Prevent negative weight (extra safety) and keep UI consistent
+        function clampWeight(el) {
+            if (el == null) return;
+            if (el.value === "") return;
+            const v = parseFloat(el.value);
+            if (isNaN(v)) return;
+            if (v < 0) {
+                el.value = "0";
+            }
+        }
+
+        // --- 2. LOGIC TÍNH TIỀN (CORE) ---
+        function calculateTotal() {
+            const pickupId = parseInt(document.getElementById("PickupAreaId").value);
+            const deliveryId = parseInt(document.getElementById("DeliveryAreaId").value);
+            const distance = parseFloat(elDist.value) || 0;
+            const weight = parseFloat(elWeight.value) || 0;
+
+            const pickup = priceTables.find(p => p.AreaId === pickupId);
+            const delivery = priceTables.find(p => p.AreaId === deliveryId);
+
+            let total = 0;
+
+            // Requirement: if either distance OR weight is 0 => total must be 0
+            if (pickup && delivery && distance > 0 && weight > 0) {
+                total = pickup.BasePrice + delivery.BasePrice;
+                total += distance * (pickup.PricePerKm + delivery.PricePerKm);
+                total += weight * (pickup.WeightPrice + delivery.WeightPrice);
+            } else {
+                total = 0;
+            }
+
+            elPrice.value = total.toLocaleString() + " VNĐ";
+        }
+
+        // Gán sự kiện cơ bản
+        document.getElementById("PickupAreaId").addEventListener("change", calculateTotal);
+        document.getElementById("DeliveryAreaId").addEventListener("change", calculateTotal);
+        elWeight.addEventListener("input", () => { clampWeight(elWeight); calculateTotal(); });
+
+
+        // --- 3. LOGIC XỬ LÝ ĐỊA CHỈ "THÔNG MINH" ---
+
+        // Hàm này chạy ngay khi người dùng nhấn phím
+        function handleInput(inputElement, listId) {
+            const keyword = inputElement.value;
+
+            // >>> TÍNH NĂNG MỚI: RESET NGAY LẬP TỨC <<<
+            // Bất kể đang gõ hay xóa, cứ đụng vào ô địa chỉ là coi như quãng đường cũ không còn đúng nữa.
+            // Reset về 0 ngay để tránh sai sót.
+            resetState();
+
+            // Nếu ô nhập trống trơn -> Dừng lại, không gợi ý gì cả
+            if (!keyword || keyword.trim() === "") {
+                return;
+            }
+
+            // Kiểm tra xem người dùng có chọn từ Gợi ý hay không?
+            const listOptions = document.getElementById(listId).options;
+            let isSelected = false;
+            for (let i = 0; i < listOptions.length; i++) {
+                if (keyword === listOptions[i].value) {
+                    isSelected = true;
+                    break;
+                }
+            }
+
+            // Nếu đã chọn đúng gợi ý -> Tính toán lại từ đầu
+            if (isSelected) {
+                autoCalculate();
+                return;
+            }
+
+            // Nếu đang gõ dở -> Tìm gợi ý (Sau 300ms)
+            // Hiện icon loading trong ô input
+            inputElement.style.backgroundImage = "url('https://i.gifer.com/ZZ5H.gif')";
+            inputElement.style.backgroundRepeat = "no-repeat";
+            inputElement.style.backgroundPosition = "right 10px center";
+            inputElement.style.backgroundSize = "20px";
+
+            clearTimeout(timeoutSuggest);
+            timeoutSuggest = setTimeout(() => {
+                fetchSuggestions(keyword, listId, inputElement);
+            }, 300);
+        }
+
+        // Hàm Reset trạng thái về "Con số 0"
+        function resetState() {
+            elDist.value = ""; // Xóa khoảng cách
+            elStatus.innerText = "Đang nhập địa chỉ...";
+            elStatus.className = "text-muted fst-italic";
+            elIcon.innerHTML = '<i class="fa-solid fa-route text-secondary"></i>';
+
+            calculateTotal(); // Tính lại tiền (về giá gốc) ngay lập tức
+        }
+
+        // API Lấy gợi ý (Nominatim)
+        async function fetchSuggestions(keyword, listId, inputElement) {
+            try {
+                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(keyword)}&countrycodes=vn&accept-language=vi&limit=5`;
+                let res = await fetch(url);
+                let data = await res.json();
+
+                const dataList = document.getElementById(listId);
+                dataList.innerHTML = "";
+
+                data.forEach(item => {
+                    let option = document.createElement('option');
+                    option.value = item.display_name;
+                    dataList.appendChild(option);
+                });
+            } catch (e) {
+                console.error(e);
+            } finally {
+                inputElement.style.backgroundImage = "none"; // Tắt loading
+            }
+        }
+
+        // --- 4. TỰ ĐỘNG TÍNH TOÁN (KHI ĐÃ CHỌN XONG 2 ĐỊA CHỈ) ---
+        async function autoCalculate() {
+            const originText = elOrigin.value;
+            const destText = elDest.value;
+
+            // Chỉ tính khi cả 2 ô đã có dữ liệu
+            if (!originText || !destText) return;
+
+            // UI: Báo hiệu đang tính
+            elStatus.innerText = "Đang đo khoảng cách...";
+            elStatus.className = "text-primary fw-bold blink-animation";
+            elIcon.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary"></i>';
+
+            try {
+                const headers = { "User-Agent": "StudentBTL/1.0" };
+
+                // Gọi song song 2 API tìm tọa độ
+                const [res1, res2] = await Promise.all([
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(originText)}&countrycodes=vn&limit=1`, {headers}),
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destText)}&countrycodes=vn&limit=1`, {headers})
+                ]);
+
+                const data1 = await res1.json();
+                const data2 = await res2.json();
+
+                if (data1.length === 0 || data2.length === 0) {
+                    // Không tìm thấy thì thôi, vẫn để người dùng nhập tay nếu muốn
+                    return;
+                }
+
+                // Gọi API OSRM tính đường đi
+                let urlRoute = `https://router.project-osrm.org/route/v1/driving/${data1[0].lon},${data1[0].lat};${data2[0].lon},${data2[0].lat}?overview=false`;
+                let resRoute = await fetch(urlRoute);
+                let dataRoute = await resRoute.json();
+
+                if (dataRoute.code === "Ok") {
+                    let km = (dataRoute.routes[0].distance / 1000).toFixed(1);
+
+                    // Gán kết quả
+                    elDist.value = km;
+
+                    // UI: Thành công
+                    elStatus.innerText = `✅ Quãng đường: ${km} km`;
+                    elStatus.className = "text-success fw-bold";
+                    elIcon.innerHTML = '<i class="fa-solid fa-check text-success"></i>';
+
+                    // Tính tiền lần cuối
+                    calculateTotal();
+                }
+            } catch (err) {
+                console.warn("Lỗi tính toán tự động", err);
+                // Nếu lỗi thì reset nhẹ để người dùng biết
+                elStatus.innerText = "Không tự tính được. Hãy kiểm tra lại địa chỉ.";
+                elStatus.className = "text-warning";
+                elIcon.innerHTML = '<i class="fa-solid fa-exclamation text-warning"></i>';
+            }
+        }
+    </script>
+
+    <style>
+        .blink-animation {
+            animation: blinker 0.8s linear infinite;
+        }
+
+        @@keyframes blinker {
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
 }

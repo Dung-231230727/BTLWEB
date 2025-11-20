@@ -47,7 +47,8 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-secondary small text-uppercase">Trọng lượng (kg)</label>
-                            <input asp-for="Order.WeightKg" class="form-control bg-light border-0" id="WeightKg" type="number" step="0.1" style="height: 50px;" />
+                            <input asp-for="Order.WeightKg" class="form-control bg-light border-0" id="WeightKg" type="number" step="0.1" min="0" style="height: 50px;"
+                                   oninput="if(this.value && parseFloat(this.value) < 0) this.value = 0;" />
                         </div>
                     </div>
 
@@ -112,11 +113,16 @@
             const delivery = priceTables.find(p => p.AreaId === deliveryId);
 
             let total = 0;
-            if (pickup && delivery) {
+
+            // Chỉ tính khi có bảng giá cho cả 2 khu vực VÀ distance > 0 VÀ weight > 0
+            if (pickup && delivery && distance > 0 && weight > 0) {
                 total = pickup.BasePrice + delivery.BasePrice;
                 total += distance * (pickup.PricePerKm + delivery.PricePerKm);
                 total += weight * (pickup.WeightPrice + delivery.WeightPrice);
+            } else {
+                total = 0;
             }
+
             document.getElementById("TotalPrice").value = total.toLocaleString();
         }
 
