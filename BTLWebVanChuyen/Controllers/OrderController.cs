@@ -1,4 +1,4 @@
-﻿using BTLWebVanChuyen.Data;
+using BTLWebVanChuyen.Data;
 using BTLWebVanChuyen.Models;
 using BTLWebVanChuyen.Models.ViewModels;
 using BTLWebVanChuyen.Utility;
@@ -436,9 +436,9 @@ namespace BTLWebVanChuyen.Controllers
             }
 
             var order = await _context.Orders
-                .Include(o => o.Customer)
-                .Include(o => o.Dispatcher)
-                .Include(o => o.Shipper)
+                .Include(o => o.Customer).ThenInclude(c => c.User)
+                .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
+                .Include(o => o.Shipper).ThenInclude(s => s!.User)
                 .Include(o => o.PickupArea)
                 .Include(o => o.DeliveryArea)
                 .Include(o => o.OrderLogs)
