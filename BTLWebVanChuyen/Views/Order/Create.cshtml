@@ -82,7 +82,7 @@
 
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-secondary small text-uppercase">Trọng lượng (kg)</label>
-                            <input asp-for="Order.WeightKg" class="form-control bg-light border-0" id="WeightKg" type="number" step="0.1" style="height: 50px;" />
+                            <input asp-for="Order.WeightKg" class="form-control bg-light border-0" id="WeightKg" type="number" step="0.1" min="0" style="height: 50px;" />
                         </div>
                     </div>
 
@@ -120,7 +120,7 @@
 
                     <div class="d-flex gap-3">
                         <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-sm hover-top">Tạo đơn hàng</button>
-                        <a asp-action="Index" class="btn btn-light w-100 py-3 fw-bold rounded-pill text-secondary hover-top">Hủy bỏ</a>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-light w-100 py-3 fw-bold rounded-pill text-secondary hover-top">Hủy bỏ</a>
                     </div>
                 </form>
             </div>
@@ -189,6 +189,17 @@
         const elStatus = document.getElementById('mapStatus');
         const elIcon = document.getElementById('statusIcon');
 
+        // Prevent negative weight (extra safety) and keep UI consistent
+        function clampWeight(el) {
+            if (el == null) return;
+            if (el.value === "") return;
+            const v = parseFloat(el.value);
+            if (isNaN(v)) return;
+            if (v < 0) {
+                el.value = "0";
+            }
+        }
+
         // --- 2. LOGIC TÍNH TIỀN (CORE) ---
         function calculateTotal() {
             const pickupId = parseInt(document.getElementById("PickupAreaId").value);
@@ -200,19 +211,23 @@
             const delivery = priceTables.find(p => p.AreaId === deliveryId);
 
             let total = 0;
-            if (pickup && delivery) {
+
+            // Requirement: if either distance OR weight is 0 => total must be 0
+            if (pickup && delivery && distance > 0 && weight > 0) {
                 total = pickup.BasePrice + delivery.BasePrice;
-                // Chỉ tính phí km và trọng lượng nếu có dữ liệu
-                if (distance > 0) total += distance * (pickup.PricePerKm + delivery.PricePerKm);
-                if (weight > 0) total += weight * (pickup.WeightPrice + delivery.WeightPrice);
+                total += distance * (pickup.PricePerKm + delivery.PricePerKm);
+                total += weight * (pickup.WeightPrice + delivery.WeightPrice);
+            } else {
+                total = 0;
             }
+
             elPrice.value = total.toLocaleString() + " VNĐ";
         }
 
         // Gán sự kiện cơ bản
         document.getElementById("PickupAreaId").addEventListener("change", calculateTotal);
         document.getElementById("DeliveryAreaId").addEventListener("change", calculateTotal);
-        elWeight.addEventListener("input", calculateTotal);
+        elWeight.addEventListener("input", () => { clampWeight(elWeight); calculateTotal(); });
 
 
         // --- 3. LOGIC XỬ LÝ ĐỊA CHỈ "THÔNG MINH" ---

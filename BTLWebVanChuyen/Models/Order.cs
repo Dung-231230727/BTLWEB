@@ -44,6 +44,7 @@ namespace BTLWebVanChuyen.Models
         public decimal DistanceKm { get; set; } = 0;
         [Required]
         [Column(TypeName = "decimal(18,2)")]
+        [Range(0, double.MaxValue, ErrorMessage = "Trọng lượng không được âm.")]
         public decimal WeightKg { get; set; } = 0;
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice { get; set; } = 0;
