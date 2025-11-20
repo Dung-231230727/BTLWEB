@@ -20,6 +20,7 @@ namespace BTLWebVanChuyen.Data
         public DbSet<OrderLog> OrderLogs { get; set; }
         public DbSet<Report> Reports { get; set; }
         public DbSet<Warehouse> Warehouses { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -85,6 +86,20 @@ namespace BTLWebVanChuyen.Data
                 .WithMany(o => o.OrderLogs)
                 .HasForeignKey(l => l.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // 9. Notification - User (ApplicationUser) 1-n
+            builder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany() // có thể thêm ICollection<Notification> vào ApplicationUser nếu cần
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 10. Notification - Order (tùy chọn) 1-n
+            builder.Entity<Notification>()
+                .HasOne(n => n.Order)
+                .WithMany()
+                .HasForeignKey(n => n.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
