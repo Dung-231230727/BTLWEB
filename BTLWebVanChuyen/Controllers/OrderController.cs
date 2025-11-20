@@ -436,7 +436,16 @@ namespace BTLWebVanChuyen.Controllers
         public async Task<IActionResult> Tracking(string trackingCode)
         {
             if (string.IsNullOrWhiteSpace(trackingCode)) { ViewBag.Error = "Vui lòng nhập mã vận đơn."; return View(); }
-            var order = await _context.Orders.Include(o => o.Customer).Include(o => o.Dispatcher).Include(o => o.Shipper).Include(o => o.PickupArea).Include(o => o.DeliveryArea).Include(o => o.OrderLogs).FirstOrDefaultAsync(o => o.TrackingCode == trackingCode);
+
+            var order = await _context.Orders
+                .Include(o => o.Customer).ThenInclude(c => c.User)
+                .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
+                .Include(o => o.Shipper).ThenInclude(s => s!.User)
+                .Include(o => o.PickupArea)
+                .Include(o => o.DeliveryArea)
+                .Include(o => o.OrderLogs)
+                .FirstOrDefaultAsync(o => o.TrackingCode == trackingCode);
+
             if (order == null) { ViewBag.Error = "Không tìm thấy đơn hàng."; return View(); }
             return View("Details", order);
         }
