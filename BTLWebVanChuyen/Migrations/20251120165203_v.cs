@@ -356,6 +356,35 @@ namespace BTLWebVanChuyen.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Notifications",
+                columns: table => new
+                {
+                    notification_id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    message = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    is_read = table.Column<bool>(type: "bit", nullable: false),
+                    created_at = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    user_id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    order_id = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Notifications", x => x.notification_id);
+                    table.ForeignKey(
+                        name: "FK_Notifications_AspNetUsers_user_id",
+                        column: x => x.user_id,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Notifications_Orders_order_id",
+                        column: x => x.order_id,
+                        principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "OrderLogs",
                 columns: table => new
                 {
@@ -435,6 +464,16 @@ namespace BTLWebVanChuyen.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Notifications_order_id",
+                table: "Notifications",
+                column: "order_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_user_id",
+                table: "Notifications",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_OrderLogs_OrderId",
                 table: "OrderLogs",
                 column: "OrderId");
@@ -502,6 +541,9 @@ namespace BTLWebVanChuyen.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUserTokens");
+
+            migrationBuilder.DropTable(
+                name: "Notifications");
 
             migrationBuilder.DropTable(
                 name: "OrderLogs");
