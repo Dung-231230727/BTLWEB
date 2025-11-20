@@ -1,4 +1,5 @@
-﻿using BTLWebVanChuyen.Models;
+using BTLWebVanChuyen.Data;
+using BTLWebVanChuyen.Models;
 using BTLWebVanChuyen.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,15 +11,18 @@ namespace BTLWebVanChuyen.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly ApplicationDbContext _context;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            RoleManager<IdentityRole> roleManager)
+            RoleManager<IdentityRole> roleManager,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
+            _context = context;
         }
 
         // GET: /Auth/Register
@@ -48,6 +52,14 @@ namespace BTLWebVanChuyen.Controllers
                     await _roleManager.CreateAsync(new IdentityRole("Customer"));
 
                 await _userManager.AddToRoleAsync(user, "Customer");
+
+                // Tạo bản ghi Customer liên kết với user vừa tạo
+                _context.Customers.Add(new Customer
+                {
+                    UserId = user.Id,
+                    Address = "" // hoặc giá trị mặc định phù hợp
+                });
+                await _context.SaveChangesAsync();
 
                 // Tự động đăng nhập
                 await _signInManager.SignInAsync(user, isPersistent: false);
