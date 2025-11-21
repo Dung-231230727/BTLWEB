@@ -103,32 +103,35 @@
         </div>
     </div>
 </div>
-<div class="container-fluid py-5">
-    <div class="container">
-        <div class="bg-primary rounded-4 p-5 wow fadeInUp reveal-item" data-wow-delay="0.1s">
-            <div class="row g-5 align-items-center">
-                <div class="col-lg-8">
-                    <h1 class="text-white mb-3 fw-bold">Bạn đã sẵn sàng gửi hàng?</h1>
-                    <p class="text-white mb-0 fs-5">Đăng ký ngay tài khoản để tạo đơn hàng và quản lý vận chuyển dễ dàng hơn bao giờ hết.</p>
-                </div>
-                <div class="col-lg-4 text-lg-end">
-                    @if (!User.Identity!.IsAuthenticated)
-                    {
-                        <a class="btn btn-dark rounded-pill py-3 px-5 fw-bold shadow-lg" asp-controller="Auth" asp-action="Register">
-                            <i class="fa-solid fa-user-plus me-2"></i>Đăng ký ngay
-                        </a>
-                    }
-                    else
-                    {
-                        <a class="btn btn-light rounded-pill py-3 px-5 fw-bold shadow-lg text-primary" asp-controller="Order" asp-action="Create">
-                            <i class="fa-solid fa-plus me-2"></i>Tạo đơn hàng
-                        </a>
-                    }
+@if (!User.Identity!.IsAuthenticated || User.IsInRole("Customer"))
+{
+    <div class="container-fluid py-5">
+        <div class="container">
+            <div class="bg-primary rounded-4 p-5 wow fadeInUp reveal-item" data-wow-delay="0.1s">
+                <div class="row g-5 align-items-center">
+                    <div class="col-lg-8">
+                        <h1 class="text-white mb-3 fw-bold">Bạn đã sẵn sàng gửi hàng?</h1>
+                        <p class="text-white mb-0 fs-5">Đăng ký ngay tài khoản để tạo đơn hàng và quản lý vận chuyển dễ dàng hơn bao giờ hết.</p>
+                    </div>
+                    <div class="col-lg-4 text-lg-end">
+                        @if (!User.Identity!.IsAuthenticated)
+                        {
+                            <a class="btn btn-dark rounded-pill py-3 px-5 fw-bold shadow-lg" asp-controller="Auth" asp-action="Register">
+                                <i class="fa-solid fa-user-plus me-2"></i>Đăng ký ngay
+                            </a>
+                        }
+                        else
+                        {
+                            <a class="btn btn-light rounded-pill py-3 px-5 fw-bold shadow-lg text-primary" asp-controller="Order" asp-action="Create">
+                                <i class="fa-solid fa-plus me-2"></i>Tạo đơn hàng
+                            </a>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

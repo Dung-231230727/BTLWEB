@@ -1,6 +1,7 @@
 ﻿using BTLWebVanChuyen.Data;
 using BTLWebVanChuyen.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -11,10 +12,39 @@ namespace BTLWebVanChuyen.Controllers
     public class WarehouseController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public WarehouseController(ApplicationDbContext context)
+        public WarehouseController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
+        }
+
+        // Helper: Lấy tất cả admin users
+        private async Task<List<string>> GetAdminUserIdsAsync()
+        {
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            return adminUsers.Select(u => u.Id).ToList();
+        }
+
+        // Helper: Tạo thông báo cho nhiều users
+        private async Task CreateNotificationsAsync(IEnumerable<string> userIds, string message, int? orderId = null)
+        {
+            var recipients = userIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+            if (!recipients.Any() || string.IsNullOrWhiteSpace(message)) return;
+
+            foreach (var uid in recipients)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = uid,
+                    Message = message,
+                    OrderId = orderId,
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                });
+            }
+            await _context.SaveChangesAsync();
         }
 
         // ==========================================
@@ -85,6 +115,24 @@ namespace BTLWebVanChuyen.Controllers
             {
                 _context.Add(warehouse);
                 await _context.SaveChangesAsync();
+                
+                // Thông báo cho admin
+                var adminUserIds = await GetAdminUserIdsAsync();
+                var areaName = await _context.Areas.Where(a => a.AreaId == warehouse.AreaId).Select(a => a.AreaName).FirstOrDefaultAsync();
+                await CreateNotificationsAsync(adminUserIds, 
+                    $"Kho hàng '{warehouse.Name}' đã được thêm mới tại khu vực '{areaName}'.");
+                
+                // Thông báo cho dispatchers và shippers trong khu vực này
+                var employeeUserIds = await _context.Employees
+                    .Where(e => e.AreaId == warehouse.AreaId)
+                    .Select(e => e.UserId)
+                    .ToListAsync();
+                if (employeeUserIds.Any())
+                {
+                    await CreateNotificationsAsync(employeeUserIds,
+                        $"Kho hàng mới '{warehouse.Name}' đã được thêm vào khu vực làm việc của bạn.");
+                }
+                
                 TempData["Message"] = "Thêm kho hàng thành công!";
                 return RedirectToAction(nameof(Index));
             }
@@ -126,6 +174,24 @@ namespace BTLWebVanChuyen.Controllers
                 {
                     _context.Update(warehouse);
                     await _context.SaveChangesAsync();
+                    
+                    // Thông báo cho admin
+                    var adminUserIds = await GetAdminUserIdsAsync();
+                    var areaName = await _context.Areas.Where(a => a.AreaId == warehouse.AreaId).Select(a => a.AreaName).FirstOrDefaultAsync();
+                    await CreateNotificationsAsync(adminUserIds, 
+                        $"Kho hàng '{warehouse.Name}' đã được cập nhật tại khu vực '{areaName}'.");
+                    
+                    // Thông báo cho dispatchers và shippers trong khu vực này
+                    var employeeUserIds = await _context.Employees
+                        .Where(e => e.AreaId == warehouse.AreaId)
+                        .Select(e => e.UserId)
+                        .ToListAsync();
+                    if (employeeUserIds.Any())
+                    {
+                        await CreateNotificationsAsync(employeeUserIds,
+                            $"Kho hàng '{warehouse.Name}' trong khu vực làm việc của bạn đã được cập nhật.");
+                    }
+                    
                     TempData["Message"] = "Cập nhật thông tin kho thành công!";
                 }
                 catch (DbUpdateConcurrencyException)
@@ -173,8 +239,39 @@ namespace BTLWebVanChuyen.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            var warehouseName = warehouse.Name;
+            var warehouseAreaId = warehouse.AreaId;
+            
+            // Thông báo cho dispatchers và shippers trong khu vực này trước khi xóa
+            var employeeUserIds = await _context.Employees
+                .Where(e => e.AreaId == warehouseAreaId)
+                .Select(e => e.UserId)
+                .ToListAsync();
+            if (employeeUserIds.Any())
+            {
+                await CreateNotificationsAsync(employeeUserIds,
+                    $"Kho hàng '{warehouseName}' trong khu vực làm việc của bạn đã bị xóa khỏi hệ thống.");
+            }
+            
+            // Thông báo cho customers có đơn hàng liên quan đến kho này
+            var customerUserIds = await _context.Orders
+                .Where(o => o.PickupWarehouseId == id || o.DeliveryWarehouseId == id)
+                .Select(o => o.Customer.UserId)
+                .Distinct()
+                .ToListAsync();
+            if (customerUserIds.Any())
+            {
+                await CreateNotificationsAsync(customerUserIds,
+                    $"Kho hàng '{warehouseName}' liên quan đến đơn hàng của bạn đã bị xóa khỏi hệ thống.");
+            }
+            
             _context.Warehouses.Remove(warehouse);
             await _context.SaveChangesAsync();
+            
+            // Thông báo cho admin
+            var adminUserIds = await GetAdminUserIdsAsync();
+            await CreateNotificationsAsync(adminUserIds, 
+                $"Kho hàng '{warehouseName}' đã bị xóa khỏi hệ thống.");
 
             TempData["Message"] = "Đã xóa kho hàng thành công.";
             return RedirectToAction(nameof(Index));

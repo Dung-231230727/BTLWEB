@@ -78,6 +78,33 @@ namespace BTLWebVanChuyen.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            var customerName = customer.User?.FullName ?? "Khách hàng";
+            var customerUserId = customer.UserId;
+            
+            // Thông báo cho customer trước khi xóa
+            _context.Notifications.Add(new Notification
+            {
+                UserId = customerUserId,
+                Message = $"Tài khoản của bạn đã bị xóa khỏi hệ thống bởi quản trị viên.",
+                CreatedAt = DateTime.Now,
+                IsRead = false
+            });
+            
+            // Thông báo cho admin
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            foreach (var admin in adminUsers)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = admin.Id,
+                    Message = $"Khách hàng '{customerName}' đã bị xóa khỏi hệ thống.",
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                });
+            }
+            
+            await _context.SaveChangesAsync();
+
             var user = await _userManager.FindByIdAsync(customer.UserId);
             if (user != null) await _userManager.DeleteAsync(user);
 
