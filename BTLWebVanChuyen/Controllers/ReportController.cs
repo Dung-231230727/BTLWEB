@@ -4,6 +4,7 @@ using BTLWebVanChuyen.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace BTLWebVanChuyen.Controllers
 {
@@ -11,19 +12,17 @@ namespace BTLWebVanChuyen.Controllers
     public class ReportController : Controller
     {
         private readonly ApplicationDbContext _context;
-
         public ReportController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // Trang chính chọn báo cáo
         public IActionResult Index()
         {
             return View();
         }
 
-        // Báo cáo tổng hợp theo ngày
+        // Báo cáo theo ngày
         public async Task<IActionResult> DailyReport(DateTime? fromDate, DateTime? toDate)
         {
             ViewBag.FromDate = fromDate?.ToString("yyyy-MM-dd");
@@ -38,60 +37,84 @@ namespace BTLWebVanChuyen.Controllers
 
             var dailyData = await query
                 .GroupBy(o => o.CreatedAt.Date)
-                .Select(g => new ReportViewModel
+                .Select(g => new DailyReportViewModel
                 {
                     ReportDate = g.Key,
                     TotalOrders = g.Count(),
                     DeliveredOrders = g.Count(o => o.Status == OrderStatus.Delivered),
                     FailedOrders = g.Count(o => o.Status == OrderStatus.Cancelled),
-                    TotalRevenue = g.Where(o => o.Status == OrderStatus.Delivered).Sum(o => o.TotalPrice)
+                    TotalRevenue = g.Where(o => o.Status == OrderStatus.Delivered).Sum(o => o.TotalPrice),
+                    CODOrders = g.Count(o => o.PaymentMethod == "COD"),
+                    OnlineOrders = g.Count(o => o.PaymentMethod == "Online")
                 })
                 .OrderBy(r => r.ReportDate)
                 .ToListAsync();
 
-            return View(dailyData); // View dùng List<ReportViewModel>
+            return View(dailyData);
         }
 
-        // Báo cáo tổng hợp theo khu vực
+
+        // Báo cáo theo khu vực
         public async Task<IActionResult> AreaReport()
         {
             var data = await _context.Orders
                 .Include(o => o.PickupArea)
-                .Include(o => o.DeliveryArea)
                 .GroupBy(o => o.PickupArea.AreaName)
-                .Select(g => new ReportViewModel
+                .Select(g => new AreaReportViewModel
                 {
                     AreaName = g.Key,
                     TotalOrders = g.Count(),
                     DeliveredOrders = g.Count(o => o.Status == OrderStatus.Delivered),
                     FailedOrders = g.Count(o => o.Status == OrderStatus.Cancelled),
+                    CODOrders = g.Count(o => o.PaymentMethod == "COD"),
+                    OnlineOrders = g.Count(o => o.PaymentMethod == "Online"),
                     TotalRevenue = g.Where(o => o.Status == OrderStatus.Delivered).Sum(o => o.TotalPrice)
                 })
                 .ToListAsync();
 
-            return View(data); // View dùng List<ReportViewModel>
+            return View(data);
         }
 
-        // Báo cáo tổng quan: tổng đơn, doanh thu, đơn thất bại
+        // Báo cáo tổng quan
         public async Task<IActionResult> SummaryReport()
         {
-            var totalOrders = await _context.Orders.CountAsync();
-            var deliveredOrders = await _context.Orders.CountAsync(o => o.Status == OrderStatus.Delivered);
-            var failedOrders = await _context.Orders.CountAsync(o => o.Status == OrderStatus.Cancelled);
-            var totalRevenue = await _context.Orders
-                .Where(o => o.Status == OrderStatus.Delivered)
-                .SumAsync(o => o.TotalPrice);
+            var orders = await _context.Orders.ToListAsync();
+            var totalOrders = orders.Count;
+            var deliveredOrders = orders.Count(o => o.Status == OrderStatus.Delivered);
+            var failedOrders = orders.Count(o => o.Status == OrderStatus.Cancelled);
 
-            var summary = new ReportViewModel
+            var summary = new SummaryReportViewModel
             {
-                ReportDate = DateTime.Now,
                 TotalOrders = totalOrders,
                 DeliveredOrders = deliveredOrders,
                 FailedOrders = failedOrders,
-                TotalRevenue = totalRevenue
+                TotalRevenue = orders.Where(o => o.Status == OrderStatus.Delivered).Sum(o => o.TotalPrice),
+
+                CODOrders = orders.Count(o => o.PaymentMethod == "COD"),
+                OnlineOrders = orders.Count(o => o.PaymentMethod == "Online"),
+                PaidOrders = orders.Count(o => o.PaymentStatus == PaymentStatus.Paid),
+                UnpaidOrders = orders.Count(o => o.PaymentStatus == PaymentStatus.Unpaid),
+                PendingOrders = orders.Count(o => o.Status == OrderStatus.Pending),
+                AvgWeight = orders.Any() ? (decimal)orders.Average(o => o.WeightKg) : 0,
+                AvgDistance = orders.Any() ? (decimal)orders.Average(o => o.DistanceKm) : 0,
+
+                SuccessRate = totalOrders > 0 ? deliveredOrders * 100.0 / totalOrders : 0,
+                FailRate = totalOrders > 0 ? failedOrders * 100.0 / totalOrders : 0
             };
 
-            return View(summary); // View dùng ReportViewModel
+            // Nếu muốn chart doanh thu theo ngày, tạo ViewBag
+            var dailyGroups = orders
+                .Where(o => o.Status == OrderStatus.Delivered)
+                .GroupBy(o => o.CreatedAt.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new { Date = g.Key.ToString("dd/MM/yyyy"), Revenue = g.Sum(x => x.TotalPrice) })
+                .ToList();
+
+            ViewBag.DailyLabelsJson = JsonSerializer.Serialize(dailyGroups.Select(g => g.Date));
+            ViewBag.DailyRevenueJson = JsonSerializer.Serialize(dailyGroups.Select(g => g.Revenue));
+
+            return View(summary);
         }
+
     }
 }

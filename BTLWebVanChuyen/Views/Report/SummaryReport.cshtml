@@ -1,4 +1,4 @@
-﻿@model BTLWebVanChuyen.Models.ViewModels.ReportViewModel
+﻿@model BTLWebVanChuyen.Models.ViewModels.SummaryReportViewModel
 @{
     ViewData["Title"] = "Báo cáo tổng quan";
 }
@@ -8,7 +8,26 @@
     <h2 class="text-dark fw-bold m-0"><i class="fa-solid fa-chart-pie me-2 text-primary"></i> @ViewData["Title"]</h2>
 </div>
 
-<div class="row g-4">
+<div class="card shadow-sm border-0 rounded-4 mb-4 p-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-secondary small text-uppercase">Từ ngày</label>
+            <input type="date" name="fromDate" class="form-control" value="@ViewBag.FromDate" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-secondary small text-uppercase">Đến ngày</label>
+            <input type="date" name="toDate" class="form-control" value="@ViewBag.ToDate" />
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                <i class="fa-solid fa-filter me-2"></i>Lọc dữ liệu
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- KPI Widget -->
     <div class="col-md-6 col-xl-3">
         <div class="card shadow-sm border-0 h-100 rounded-4 border-start border-4 border-primary">
             <div class="card-body p-4">
@@ -17,8 +36,8 @@
                         <p class="text-uppercase text-muted small fw-bold mb-1">Tổng đơn hàng</p>
                         <h3 class="fw-bold text-dark mb-0">@Model.TotalOrders</h3>
                     </div>
-                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                        <i class="fa-solid fa-box fa-lg text-primary"></i>
+                    <div class="bg-primary bg-gradient rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="fa-solid fa-box fa-lg text-white"></i>
                     </div>
                 </div>
             </div>
@@ -33,8 +52,8 @@
                         <p class="text-uppercase text-muted small fw-bold mb-1">Giao thành công</p>
                         <h3 class="fw-bold text-success mb-0">@Model.DeliveredOrders</h3>
                     </div>
-                    <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                        <i class="fa-solid fa-check-circle fa-lg text-success"></i>
+                    <div class="bg-success bg-gradient rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="fa-solid fa-check-circle fa-lg text-white"></i>
                     </div>
                 </div>
             </div>
@@ -49,8 +68,8 @@
                         <p class="text-uppercase text-muted small fw-bold mb-1">Đơn hủy / Thất bại</p>
                         <h3 class="fw-bold text-danger mb-0">@Model.FailedOrders</h3>
                     </div>
-                    <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                        <i class="fa-solid fa-triangle-exclamation fa-lg text-danger"></i>
+                    <div class="bg-danger bg-gradient rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="fa-solid fa-triangle-exclamation fa-lg text-white"></i>
                     </div>
                 </div>
             </div>
@@ -65,11 +84,118 @@
                         <p class="text-uppercase text-muted small fw-bold mb-1">Tổng doanh thu</p>
                         <h3 class="fw-bold text-warning mb-0">@Model.TotalRevenue.ToString("N0") ₫</h3>
                     </div>
-                    <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                        <i class="fa-solid fa-sack-dollar fa-lg text-warning"></i>
+                    <div class="bg-warning bg-gradient rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="fa-solid fa-sack-dollar fa-lg text-white"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Biểu đồ doanh thu theo ngày -->
+<div class="card shadow-lg border-0 rounded-4 mb-4 p-4">
+    <h5 class="fw-bold mb-3">Doanh thu theo thời gian</h5>
+    <canvas id="revenueChart" height="150"></canvas>
+</div>
+
+<!-- Biểu đồ trạng thái đơn -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-lg border-0 rounded-4 p-4">
+            <h5 class="fw-bold mb-3">Tỷ lệ trạng thái đơn</h5>
+            <canvas id="statusChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Bảng chi tiết -->
+    <div class="col-md-6">
+        <div class="card shadow-lg border-0 rounded-4 p-4">
+            <h5 class="fw-bold mb-3">Chi tiết đơn hàng</h5>
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-dark">
+                    <tr>
+                        <th>COD</th>
+                        <th>Online</th>
+                        <th>Paid</th>
+                        <th>Unpaid</th>
+                        <th>Pending</th>
+                        <th>In Transit</th>
+                        <th>Avg Weight (kg)</th>
+                        <th>Avg Distance (km)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>@Model.CODOrders</td>
+                        <td>@Model.OnlineOrders</td>
+                        <td>@Model.PaidOrders</td>
+                        <td>@Model.UnpaidOrders</td>
+                        <td>@Model.PendingOrders</td>
+                        <td>@Model.InTransitOrders</td>
+                        <td>@Model.AvgWeight</td>
+                        <td>@Model.AvgDistance</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Biểu đồ doanh thu
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        const revenueChart = new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(ViewBag.DailyLabelsJson ?? "[]"),
+                datasets: [{
+                    label: 'Doanh thu (₫)',
+                    data: @Html.Raw(ViewBag.DailyRevenueJson ?? "[]"),
+                    backgroundColor: ctx => {
+                        const gradient = revenueCtx.createLinearGradient(0, 0, 0, 200);
+                        gradient.addColorStop(0, 'rgba(54, 162, 235, 0.5)');
+                        gradient.addColorStop(1, 'rgba(54, 162, 235, 0)');
+                        return gradient;
+                    },
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+                scales: { x: { display: true }, y: { beginAtZero: true } }
+            }
+        });
+
+        // Biểu đồ trạng thái đơn
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Thành công', 'Thất bại/Hủy', 'Đang chờ', 'Đang giao'],
+                datasets: [{
+                    data: [@Model.DeliveredOrders, @Model.FailedOrders, @Model.PendingOrders, @Model.InTransitOrders],
+                    backgroundColor: [
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(220, 53, 69, 0.8)',
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(54, 162, 235, 0.8)'
+                    ],
+                    hoverOffset: 8,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    </script>
+}
