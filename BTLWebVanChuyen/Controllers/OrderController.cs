@@ -727,8 +727,6 @@ namespace BTLWebVanChuyen.Controllers
                 return View();
             }
 
-            // Tìm đơn hàng theo mã vận đơn
-            // Lưu ý: Không cần Include quá nhiều dữ liệu ở đây vì Action Details sẽ load lại đầy đủ
             var order = await _context.Orders.FirstOrDefaultAsync(o => o.TrackingCode == trackingCode);
 
             if (order == null)
@@ -737,9 +735,28 @@ namespace BTLWebVanChuyen.Controllers
                 return View();
             }
 
-            // KHẮC PHỤC LỖI: Chuyển hướng sang Action Details (GET) 
-            // Thay vì trả về View trực tiếp, giúp tránh lỗi "Confirm Form Resubmission" khi F5
-            return RedirectToAction("Details", new { id = order.Id });
+            // Chuyển sang action public để tránh bị chặn bởi [Authorize] trên Details
+            return RedirectToAction("PublicDetails", new { id = order.Id });
+        }
+
+        [AllowAnonymous]
+        public async Task<IActionResult> PublicDetails(int id)
+        {
+            var order = await _context.Orders
+                .Include(o => o.Customer).ThenInclude(c => c.User)
+                .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
+                .Include(o => o.Shipper).ThenInclude(s => s!.User)
+                .Include(o => o.PickupArea)
+                .Include(o => o.DeliveryArea)
+                .Include(o => o.PickupWarehouse)
+                .Include(o => o.DeliveryWarehouse)
+                .Include(o => o.OrderLogs)
+                .FirstOrDefaultAsync(o => o.Id == id);
+
+            if (order == null) return NotFound();
+
+            // Nếu cần ẩn thông tin nhạy cảm cho người public, build một ViewModel và chỉ truyền fields cần thiết.
+            return View("Details", order);
         }
 
         // ============================
