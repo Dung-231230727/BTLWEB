@@ -853,14 +853,32 @@ namespace BTLWebVanChuyen.Controllers
             if (!string.IsNullOrWhiteSpace(shipperUserId))
                 recipients.Add(shipperUserId);
 
+            // Thông báo cho customer (chính chủ)
+            recipients.Add(customer.UserId);
+
             // Loại bỏ trùng lặp và gửi thông báo
             recipients = recipients.Distinct().ToList();
-            if (recipients.Any())
+
+            var messageForOthers =
+                $"Đơn {order.TrackingCode} đã bị hủy bởi khách hàng {user.FullName}.";
+
+            var messageForCustomer =
+                $"Đơn {order.TrackingCode} đã bị hủy bởi bạn.";
+
+            var otherReceivers = recipients.Where(id => id != customer.UserId).ToList();
+
+            // 1. Gửi cho các role khác (Dispatcher, Shipper)
+            if (otherReceivers.Any())
             {
-                await CreateNotificationsAsync(recipients,
-                    $"Đơn {order.TrackingCode} đã bị hủy bởi khách hàng {user.FullName}.",
+                await CreateNotificationsAsync(otherReceivers,
+                    messageForOthers,
                     order.Id);
             }
+
+            // 2. Gửi cho chính khách hàng
+            await CreateNotificationAsync(customer.UserId,
+                messageForCustomer,
+                order.Id);
 
             return Json(new { success = true });
         }
