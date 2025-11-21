@@ -405,7 +405,43 @@ namespace BTLWebVanChuyen.Controllers
                 else if (order.Status == OrderStatus.AssignedReturnShipper && status == OrderStatus.ReturningToSender) isValidTransition = true;
                 else if (order.Status == OrderStatus.ReturningToSender)
                 {
-                    if (status == OrderStatus.Returned || status == OrderStatus.ReturnFailed) isValidTransition = true;
+                    if (status == OrderStatus.Returned)
+                    {
+                        // === [LOGIC MỚI] HOÀN TIỀN VÍ ===
+                        // Chỉ hoàn tiền nếu: Đã thanh toán (Paid) VÀ Người gửi là người trả (Sender)
+                        if (order.PaymentStatus == PaymentStatus.Paid && order.Payer == PayerType.Sender)
+                        {
+                            var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
+                            if (!string.IsNullOrWhiteSpace(customerUserId))
+                            {
+                                // Cộng tiền vào ví khách
+                                await ProcessWalletTransaction(
+                                    customerUserId,
+                                    order.TotalPrice, // Số dương (+)
+                                    "REFUND",
+                                    $"Hoàn tiền đơn hàng {order.TrackingCode} (Trả hàng thành công)",
+                                    order.Id
+                                );
+
+                                // Ghi chú vào Log
+                                if (order.OrderLogs == null) order.OrderLogs = new List<OrderLog>();
+                                order.OrderLogs.Add(new OrderLog
+                                {
+                                    OrderId = order.Id,
+                                    Status = status,
+                                    Time = DateTime.Now,
+                                    Note = "Hệ thống tự động hoàn tiền vào ví người gửi.",
+                                    UpdatedBy = "System"
+                                });
+                            }
+                        }
+                        // ================================
+                        isValidTransition = true;
+                    }
+                    else if (status == OrderStatus.ReturnFailed)
+                    {
+                        isValidTransition = true;
+                    }
                 }
             }
             // --- B. LOGIC CỦA DISPATCHER ---
@@ -796,6 +832,16 @@ namespace BTLWebVanChuyen.Controllers
             order.PaymentStatus = PaymentStatus.Paid;
             order.PaymentTransactionId = $"COD_COLLECTED_BY_{user!.UserName}_{DateTime.Now:yyyyMMddHHmmss}";
 
+            // === [MỚI] TRỪ TIỀN VÀO VÍ SHIPPER (CÔNG NỢ) ===
+            // Shipper cầm tiền mặt -> Ví điện tử bị trừ tương ứng
+            await ProcessWalletTransaction(
+                shipper.UserId,
+                -order.TotalPrice, // Số âm
+                "COD_DEDUCT",
+                $"Thu hộ COD đơn hàng {order.TrackingCode}",
+                order.Id
+            );
+
             if (order.OrderLogs == null) order.OrderLogs = new List<OrderLog>();
             order.OrderLogs.Add(new OrderLog
             {
@@ -991,6 +1037,38 @@ namespace BTLWebVanChuyen.Controllers
                 }).ToList()
             };
             return View("Create", vm);
+        }
+
+        // ============================
+        // HÀM TIỆN ÍCH: Xử lý giao dịch ví
+        // ============================
+        private async Task ProcessWalletTransaction(string userId, decimal amount, string type, string description, int orderId)
+        {
+            // 1. Tìm hoặc tạo ví nếu chưa có
+            var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId);
+            if (wallet == null)
+            {
+                wallet = new Wallet { UserId = userId, Balance = 0 };
+                _context.Wallets.Add(wallet);
+            }
+
+            // 2. Cập nhật số dư
+            wallet.Balance += amount;
+            wallet.LastUpdated = DateTime.Now;
+
+            // 3. Ghi lịch sử
+            var transaction = new WalletTransaction
+            {
+                Wallet = wallet,
+                Amount = amount,
+                Type = type,
+                Description = description,
+                RelatedOrderId = orderId,
+                CreatedAt = DateTime.Now
+            };
+            _context.WalletTransactions.Add(transaction);
+
+            // Lưu ý: Không gọi SaveChanges ở đây để gộp chung transaction với hàm chính
         }
     }
 }

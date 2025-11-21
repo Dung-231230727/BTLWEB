@@ -21,6 +21,9 @@ namespace BTLWebVanChuyen.Data
         public DbSet<Report> Reports { get; set; }
         public DbSet<Warehouse> Warehouses { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Wallet> Wallets { get; set; }
+        public DbSet<WalletTransaction> WalletTransactions { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -100,6 +103,13 @@ namespace BTLWebVanChuyen.Data
                 .WithMany()
                 .HasForeignKey(n => n.OrderId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // 11. User - Wallet (1-1)
+            builder.Entity<ApplicationUser>()
+                .HasOne<Wallet>()
+                .WithOne(w => w.User)
+                .HasForeignKey<Wallet>(w => w.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

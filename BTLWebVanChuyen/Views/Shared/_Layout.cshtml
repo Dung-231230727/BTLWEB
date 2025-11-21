@@ -14,7 +14,7 @@
     // Lấy số lượng thông báo chưa đọc cho người dùng đã đăng nhập
     if (isAuthenticated)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = User!.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!string.IsNullOrEmpty(userId))
         {
             unreadNotifications = DbContext.Notifications.Count(n => n.UserId == userId && !n.IsRead);
@@ -74,11 +74,11 @@
             will-change: opacity, transform; /* Tăng hiệu năng */
         }
 
-        /* Trạng thái đã hiện ra (khi class 'revealed' được thêm vào bằng JS) */
-        .reveal-item.revealed {
-            opacity: 1;
-            transform: translateY(0);
-        }
+            /* Trạng thái đã hiện ra (khi class 'revealed' được thêm vào bằng JS) */
+            .reveal-item.revealed {
+                opacity: 1;
+                transform: translateY(0);
+            }
     </style>
 </head>
 <body>
@@ -192,10 +192,12 @@
                                         <form asp-action="Logout" asp-controller="Auth" method="post">
                                             <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-power-off me-2"></i> Đăng xuất</button>
                                         </form>
-                                        <a class="dropdown-item text-danger" href="@Url.Action("Info", "Customer")">
-                                            <i class="fa-solid fa-user me-2"></i> Tài khoản
-                                        </a>
-
+                                        <form asp-action="" asp-controller="" method="post">
+                                            <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-user me-2"></i> Tài khoản</button>
+                                        </form>
+                                        <form asp-action="Index" asp-controller="Wallet">
+                                            <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-user me-2"></i> Ví tiền</button>
+                                        </form>
                                     </li>
                                 </ul>
                             </div>

@@ -1,0 +1,90 @@
+﻿@model BTLWebVanChuyen.Models.Wallet
+@{
+    ViewData["Title"] = "Ví của tôi";
+    var transactions = ViewBag.Transactions as List<BTLWebVanChuyen.Models.WalletTransaction>;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0 bg-primary text-white rounded-4">
+                <div class="card-body p-4 text-center">
+                    <h5 class="text-uppercase opacity-75 mb-1">Số dư hiện tại</h5>
+                    <h2 class="display-6 fw-bold mb-0">@Model.Balance.ToString("N0") đ</h2>
+                    <div class="mt-4">
+                        <button class="btn btn-light rounded-pill px-4 fw-bold text-primary shadow-sm">
+                            <i class="fa-solid fa-plus me-2"></i>Nạp tiền
+                        </button>
+                        <button class="btn btn-outline-light rounded-pill px-4 fw-bold ms-2">
+                            <i class="fa-solid fa-money-bill-transfer me-2"></i>Rút tiền
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="fw-bold text-primary mb-0"><i class="fa-solid fa-clock-rotate-left me-2"></i>Lịch sử giao dịch</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4 py-3">Thời gian</th>
+                                    <th class="py-3">Loại</th>
+                                    <th class="py-3">Nội dung</th>
+                                    <th class="pe-4 py-3 text-end">Số tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (transactions != null && transactions.Any())
+                                {
+                                    foreach (var item in transactions)
+                                    {
+                                        <tr>
+                                            <td class="ps-4 text-muted small">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>
+                                                @if (item.Type == "REFUND")
+                                                {
+                                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill">Hoàn tiền</span>
+                                                }
+                                                else if (item.Type == "COD_DEDUCT")
+                                                {
+                                                    <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">Trừ COD</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill">@item.Type</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold text-dark">@item.Description</span>
+                                                @if (item.RelatedOrderId != null)
+                                                {
+                                                    <br />
+                                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@item.RelatedOrderId" class="small text-decoration-none">Xem đơn hàng</a>
+                                                }
+                                            </td>
+                                            <td class="pe-4 text-end fw-bold @(item.Amount > 0 ? "text-success" : "text-danger")">
+                                                @(item.Amount > 0 ? "+" : "")@item.Amount.ToString("N0") đ
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center py-5 text-muted">Chưa có giao dịch nào.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
