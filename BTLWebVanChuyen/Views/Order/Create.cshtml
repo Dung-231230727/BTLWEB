@@ -36,7 +36,7 @@
                         <label class="form-label fw-bold text-secondary small text-uppercase">Địa chỉ lấy chi tiết</label>
                         <div class="position-relative">
                             <input asp-for="Order.PickupAddress" id="txtOrigin" class="form-control bg-light border-0"
-                                   placeholder="Gõ địa chỉ (VD: Đại học Công nghiệp...)" style="height: 50px;"
+                                   placeholder="Gõ địa chỉ (VD: Đại học Giao Thông Vận Tải...)" style="height: 50px;"
                                    list="suggestOrigin"
                                    oninput="handleInput(this, 'suggestOrigin')"
                                    onchange="autoCalculate()"
@@ -127,34 +127,275 @@
         </div>
     </div>
 </div>
-
-@* @section Scripts {
+@section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+
     <script>
+        // --- 1. CẤU HÌNH ---
         const priceTables = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables))');
+        let timeoutSuggest;
 
+        const elOrigin = document.getElementById('txtOrigin');
+        const elDest = document.getElementById('txtDestination');
+        const elDist = document.getElementById('DistanceKm');
+        const elWeight = document.getElementById('WeightKg');
+        const elPrice = document.getElementById("TotalPrice");
+        const elStatus = document.getElementById('mapStatus');
+
+        const elPickupArea = document.getElementById("PickupAreaId");
+        const elDeliveryArea = document.getElementById("DeliveryAreaId");
+
+        // --- 2. SỰ KIỆN ---
+        // Khi đổi khu vực -> Check lại ngay lập tức
+        elPickupArea.addEventListener("change", () => { validateAndCalculate(); });
+        elDeliveryArea.addEventListener("change", () => { validateAndCalculate(); });
+
+        // Khi nhập cân nặng -> Tính tiền
+        elWeight.addEventListener("input", () => {
+            if(elWeight.value < 0) elWeight.value = 0;
+            calculateTotal();
+        });
+
+        // Khi nhập địa chỉ (Gõ phím) -> Gợi ý
+        elOrigin.addEventListener("input", () => handleInput(elOrigin, 'suggestOrigin'));
+        elDest.addEventListener("input", () => handleInput(elDest, 'suggestDest'));
+
+        // Khi rời ô nhập -> Đảm bảo có tọa độ & Check lại khu vực
+        elOrigin.addEventListener("change", () => ensureCoordinates(elOrigin));
+        elDest.addEventListener("change", () => ensureCoordinates(elDest));
+
+        // --- 3. LOGIC XỬ LÝ NHẬP LIỆU ---
+        function handleInput(inputElement, listId) {
+            const keyword = inputElement.value;
+            if (!keyword) {
+                resetState(inputElement);
+                return;
+            }
+
+            // 1. Check chọn từ list
+            const listOptions = document.getElementById(listId).options;
+            let found = false;
+            for (let i = 0; i < listOptions.length; i++) {
+                if (keyword === listOptions[i].value) {
+                    inputElement.dataset.lat = listOptions[i].getAttribute('data-lat');
+                    inputElement.dataset.lon = listOptions[i].getAttribute('data-lon');
+                    validateAndCalculate(); // Chọn xong -> Tính luôn
+                    found = true;
+                    break;
+                }
+            }
+
+            if(found) return;
+
+            // 2. Đang gõ -> Xóa tọa độ cũ
+            inputElement.removeAttribute('data-lat');
+            inputElement.removeAttribute('data-lon');
+
+            // Loading
+            inputElement.style.backgroundImage = "url('https://i.gifer.com/ZZ5H.gif')";
+            inputElement.style.backgroundRepeat = "no-repeat";
+            inputElement.style.backgroundPosition = "right 10px center";
+            inputElement.style.backgroundSize = "20px";
+
+            clearTimeout(timeoutSuggest);
+            timeoutSuggest = setTimeout(() => {
+                fetchSuggestions(keyword, listId, inputElement);
+            }, 300);
+        }
+
+        async function ensureCoordinates(inputElement) {
+            if (inputElement.dataset.lat) return; // Đã có thì thôi
+
+            const keyword = inputElement.value;
+            if (!keyword) return;
+
+            // Tìm tọa độ lần cuối nếu user gõ tay
+            const coords = await getCoordsNominatim(keyword);
+            if (coords) {
+                inputElement.dataset.lat = coords.lat;
+                inputElement.dataset.lon = coords.lon;
+                validateAndCalculate();
+            }
+        }
+
+        // --- 4. HÀM TÍNH TOÁN & CHECK NGHIÊM NGẶT ---
+        async function validateAndCalculate() {
+            const originVal = elOrigin.value;
+            const destVal = elDest.value;
+
+            // Chưa nhập đủ -> Reset & Thoát
+            if (!originVal || !destVal) {
+                elDist.value = "";
+                calculateTotal();
+                return;
+            }
+
+            // --- BƯỚC 1: CHECK KHU VỰC (STRICT MODE) ---
+            const pickupAreaName = getAreaNameById(elPickupArea.value);
+            const deliveryAreaName = getAreaNameById(elDeliveryArea.value);
+
+            // Check Địa chỉ Lấy
+            if (!checkAreaMatch(originVal, pickupAreaName)) {
+                alert(`❌ SAI KHU VỰC!\nĐịa chỉ lấy: "${originVal}"\nKhông thuộc khu vực: "${pickupAreaName}"\n\nVui lòng nhập lại đúng địa chỉ trong khu vực này.`);
+
+                elOrigin.value = ""; // Xóa trắng ô sai
+                elOrigin.removeAttribute('data-lat'); // Xóa tọa độ
+                elOrigin.focus(); // Focus lại cho nhập
+
+                resetUIError("Địa chỉ Lấy sai khu vực. Đã xóa.");
+                return; // Dừng ngay lập tức
+            }
+
+            // Check Địa chỉ Giao
+            if (!checkAreaMatch(destVal, deliveryAreaName)) {
+                alert(`❌ SAI KHU VỰC!\nĐịa chỉ giao: "${destVal}"\nKhông thuộc khu vực: "${deliveryAreaName}"\n\nVui lòng nhập lại đúng địa chỉ trong khu vực này.`);
+
+                elDest.value = ""; // Xóa trắng ô sai
+                elDest.removeAttribute('data-lat');
+                elDest.focus();
+
+                resetUIError("Địa chỉ Giao sai khu vực. Đã xóa.");
+                return; // Dừng ngay lập tức
+            }
+
+            // --- BƯỚC 2: NẾU ĐÚNG KHU VỰC -> MỚI ĐI TÍNH TOÁN ---
+
+            // Đảm bảo có tọa độ (gọi lại ensure nếu cần)
+            if (!elOrigin.dataset.lat) await ensureCoordinates(elOrigin);
+            if (!elDest.dataset.lat) await ensureCoordinates(elDest);
+
+            const lat1 = elOrigin.dataset.lat;
+            const lon1 = elOrigin.dataset.lon;
+            const lat2 = elDest.dataset.lat;
+            const lon2 = elDest.dataset.lon;
+
+            if (!lat1 || !lat2) return;
+
+            elStatus.innerText = "Đang đo đường...";
+            elStatus.className = "text-primary fw-bold blink-animation";
+
+            try {
+                // Gọi OSRM tính đường
+                let urlRoute = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+                let resRoute = await fetch(urlRoute);
+                let dataRoute = await resRoute.json();
+
+                if (dataRoute.code === "Ok") {
+                    let km = (dataRoute.routes[0].distance / 1000).toFixed(1);
+                    elDist.value = km;
+                    elStatus.innerText = `✅ Hợp lệ: ${km} km`;
+                    elStatus.className = "text-success fw-bold";
+                    calculateTotal();
+                }
+            } catch (err) {
+                // Fallback Haversine
+                let km = getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2).toFixed(1);
+                elDist.value = km;
+                elStatus.innerText = `⚠️ Ước tính: ${km} km`;
+                elStatus.className = "text-warning fw-bold";
+                calculateTotal();
+            }
+        }
+
+        // --- HELPER FUNCTIONS ---
         function calculateTotal() {
-            const pickupId = parseInt(document.getElementById("PickupAreaId").value);
-            const deliveryId = parseInt(document.getElementById("DeliveryAreaId").value);
-            const distance = parseFloat(document.getElementById("DistanceKm").value) || 0;
-            const weight = parseFloat(document.getElementById("WeightKg").value) || 0;
-
+            const pickupId = parseInt(elPickupArea.value);
+            const deliveryId = parseInt(elDeliveryArea.value);
+            const distance = parseFloat(elDist.value) || 0;
+            const weight = parseFloat(elWeight.value) || 0;
             const pickup = priceTables.find(p => p.AreaId === pickupId);
             const delivery = priceTables.find(p => p.AreaId === deliveryId);
 
             let total = 0;
-            if (pickup && delivery) {
+            if (pickup && delivery && distance > 0 && weight > 0) {
                 total = pickup.BasePrice + delivery.BasePrice;
                 total += distance * (pickup.PricePerKm + delivery.PricePerKm);
                 total += weight * (pickup.WeightPrice + delivery.WeightPrice);
             }
-            document.getElementById("TotalPrice").value = total.toLocaleString() + " VNĐ";
+            elPrice.value = total.toLocaleString() + " VNĐ";
         }
 
-        document.getElementById("PickupAreaId").addEventListener("change", calculateTotal);
-        document.getElementById("DeliveryAreaId").addEventListener("change", calculateTotal);
-        document.getElementById("DistanceKm").addEventListener("input", calculateTotal);
-        document.getElementById("WeightKg").addEventListener("input", calculateTotal);
+        function checkAreaMatch(fullAddress, areaName) {
+            if(!fullAddress) return false;
+            const cleanFull = removeVietnameseTones(fullAddress).toLowerCase();
+            const cleanArea = removeVietnameseTones(areaName).toLowerCase();
+            return cleanFull.includes(cleanArea);
+        }
+
+        function removeVietnameseTones(str) {
+            str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a");
+            str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e");
+            str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i");
+            str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o");
+            str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u");
+            str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y");
+            str = str.replace(/đ/g,"d");
+            str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
+            str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
+            str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
+            str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
+            str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
+            str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
+            str = str.replace(/Đ/g, "D");
+            return str;
+        }
+
+        function getAreaNameById(id) {
+            const select = (id == elPickupArea.value) ? elPickupArea : elDeliveryArea;
+            return select.options[select.selectedIndex].text;
+        }
+
+        function resetUIError(msg) {
+            elDist.value = "";
+            elStatus.innerText = "❌ " + msg;
+            elStatus.className = "text-danger fw-bold";
+            document.getElementById("TotalPrice").value = "0 VNĐ";
+        }
+
+        function resetState(inputElement) {
+            if(inputElement) { inputElement.removeAttribute('data-lat'); inputElement.removeAttribute('data-lon'); }
+            elDist.value = "";
+            elStatus.innerText = "Đang chờ nhập liệu...";
+            elStatus.className = "text-muted fst-italic";
+            calculateTotal();
+        }
+
+        async function fetchSuggestions(keyword, listId, inputElement) {
+            try {
+                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(keyword)}&countrycodes=vn&accept-language=vi&addressdetails=1&limit=5`;
+                let res = await fetch(url);
+                let data = await res.json();
+                const dataList = document.getElementById(listId);
+                dataList.innerHTML = "";
+                data.forEach(item => {
+                    let option = document.createElement('option');
+                    option.value = item.display_name;
+                    option.setAttribute('data-lat', item.lat);
+                    option.setAttribute('data-lon', item.lon);
+                    dataList.appendChild(option);
+                });
+            } catch (e) { } finally { inputElement.style.backgroundImage = "none"; }
+        }
+
+        async function getCoordsNominatim(address) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=vn&limit=1`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data && data.length > 0) return { lat: data[0].lat, lon: data[0].lon };
+            } catch (e) {}
+            return null;
+        }
+
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            var R = 6371;
+            var dLat = deg2rad(lat2 - lat1);
+            var dLon = deg2rad(lon2 - lon1);
+            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+        function deg2rad(deg) { return deg * (Math.PI / 180); }
 
         const payerSelect = document.getElementById('PayerSelect');
         const paymentMethodSelect = document.getElementById("PaymentMethod");
@@ -169,201 +410,6 @@
         }
         payerSelect.addEventListener('change', updatePaymentOptions);
         updatePaymentOptions();
-    </script>
-} *@
-
-@section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
-
-    <script>
-        // --- 1. CẤU HÌNH & BIẾN TOÀN CỤC ---
-        const priceTables = JSON.parse('@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PriceTables))');
-        let timeoutSuggest;
-
-        // Cache các element để đỡ phải tìm lại nhiều lần (Tối ưu hiệu năng)
-        const elOrigin = document.getElementById('txtOrigin');
-        const elDest = document.getElementById('txtDestination');
-        const elDist = document.getElementById('DistanceKm');
-        const elWeight = document.getElementById('WeightKg');
-        const elPrice = document.getElementById("TotalPrice");
-        const elStatus = document.getElementById('mapStatus');
-        const elIcon = document.getElementById('statusIcon');
-
-        // Prevent negative weight (extra safety) and keep UI consistent
-        function clampWeight(el) {
-            if (el == null) return;
-            if (el.value === "") return;
-            const v = parseFloat(el.value);
-            if (isNaN(v)) return;
-            if (v < 0) {
-                el.value = "0";
-            }
-        }
-
-        // --- 2. LOGIC TÍNH TIỀN (CORE) ---
-        function calculateTotal() {
-            const pickupId = parseInt(document.getElementById("PickupAreaId").value);
-            const deliveryId = parseInt(document.getElementById("DeliveryAreaId").value);
-            const distance = parseFloat(elDist.value) || 0;
-            const weight = parseFloat(elWeight.value) || 0;
-
-            const pickup = priceTables.find(p => p.AreaId === pickupId);
-            const delivery = priceTables.find(p => p.AreaId === deliveryId);
-
-            let total = 0;
-
-            // Requirement: if either distance OR weight is 0 => total must be 0
-            if (pickup && delivery && distance > 0 && weight > 0) {
-                total = pickup.BasePrice + delivery.BasePrice;
-                total += distance * (pickup.PricePerKm + delivery.PricePerKm);
-                total += weight * (pickup.WeightPrice + delivery.WeightPrice);
-            } else {
-                total = 0;
-            }
-
-            elPrice.value = total.toLocaleString() + " VNĐ";
-        }
-
-        // Gán sự kiện cơ bản
-        document.getElementById("PickupAreaId").addEventListener("change", calculateTotal);
-        document.getElementById("DeliveryAreaId").addEventListener("change", calculateTotal);
-        elWeight.addEventListener("input", () => { clampWeight(elWeight); calculateTotal(); });
-
-
-        // --- 3. LOGIC XỬ LÝ ĐỊA CHỈ "THÔNG MINH" ---
-
-        // Hàm này chạy ngay khi người dùng nhấn phím
-        function handleInput(inputElement, listId) {
-            const keyword = inputElement.value;
-
-            // >>> TÍNH NĂNG MỚI: RESET NGAY LẬP TỨC <<<
-            // Bất kể đang gõ hay xóa, cứ đụng vào ô địa chỉ là coi như quãng đường cũ không còn đúng nữa.
-            // Reset về 0 ngay để tránh sai sót.
-            resetState();
-
-            // Nếu ô nhập trống trơn -> Dừng lại, không gợi ý gì cả
-            if (!keyword || keyword.trim() === "") {
-                return;
-            }
-
-            // Kiểm tra xem người dùng có chọn từ Gợi ý hay không?
-            const listOptions = document.getElementById(listId).options;
-            let isSelected = false;
-            for (let i = 0; i < listOptions.length; i++) {
-                if (keyword === listOptions[i].value) {
-                    isSelected = true;
-                    break;
-                }
-            }
-
-            // Nếu đã chọn đúng gợi ý -> Tính toán lại từ đầu
-            if (isSelected) {
-                autoCalculate();
-                return;
-            }
-
-            // Nếu đang gõ dở -> Tìm gợi ý (Sau 300ms)
-            // Hiện icon loading trong ô input
-            inputElement.style.backgroundImage = "url('https://i.gifer.com/ZZ5H.gif')";
-            inputElement.style.backgroundRepeat = "no-repeat";
-            inputElement.style.backgroundPosition = "right 10px center";
-            inputElement.style.backgroundSize = "20px";
-
-            clearTimeout(timeoutSuggest);
-            timeoutSuggest = setTimeout(() => {
-                fetchSuggestions(keyword, listId, inputElement);
-            }, 300);
-        }
-
-        // Hàm Reset trạng thái về "Con số 0"
-        function resetState() {
-            elDist.value = ""; // Xóa khoảng cách
-            elStatus.innerText = "Đang nhập địa chỉ...";
-            elStatus.className = "text-muted fst-italic";
-            elIcon.innerHTML = '<i class="fa-solid fa-route text-secondary"></i>';
-
-            calculateTotal(); // Tính lại tiền (về giá gốc) ngay lập tức
-        }
-
-        // API Lấy gợi ý (Nominatim)
-        async function fetchSuggestions(keyword, listId, inputElement) {
-            try {
-                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(keyword)}&countrycodes=vn&accept-language=vi&limit=5`;
-                let res = await fetch(url);
-                let data = await res.json();
-
-                const dataList = document.getElementById(listId);
-                dataList.innerHTML = "";
-
-                data.forEach(item => {
-                    let option = document.createElement('option');
-                    option.value = item.display_name;
-                    dataList.appendChild(option);
-                });
-            } catch (e) {
-                console.error(e);
-            } finally {
-                inputElement.style.backgroundImage = "none"; // Tắt loading
-            }
-        }
-
-        // --- 4. TỰ ĐỘNG TÍNH TOÁN (KHI ĐÃ CHỌN XONG 2 ĐỊA CHỈ) ---
-        async function autoCalculate() {
-            const originText = elOrigin.value;
-            const destText = elDest.value;
-
-            // Chỉ tính khi cả 2 ô đã có dữ liệu
-            if (!originText || !destText) return;
-
-            // UI: Báo hiệu đang tính
-            elStatus.innerText = "Đang đo khoảng cách...";
-            elStatus.className = "text-primary fw-bold blink-animation";
-            elIcon.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-primary"></i>';
-
-            try {
-                const headers = { "User-Agent": "StudentBTL/1.0" };
-
-                // Gọi song song 2 API tìm tọa độ
-                const [res1, res2] = await Promise.all([
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(originText)}&countrycodes=vn&limit=1`, {headers}),
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destText)}&countrycodes=vn&limit=1`, {headers})
-                ]);
-
-                const data1 = await res1.json();
-                const data2 = await res2.json();
-
-                if (data1.length === 0 || data2.length === 0) {
-                    // Không tìm thấy thì thôi, vẫn để người dùng nhập tay nếu muốn
-                    return;
-                }
-
-                // Gọi API OSRM tính đường đi
-                let urlRoute = `https://router.project-osrm.org/route/v1/driving/${data1[0].lon},${data1[0].lat};${data2[0].lon},${data2[0].lat}?overview=false`;
-                let resRoute = await fetch(urlRoute);
-                let dataRoute = await resRoute.json();
-
-                if (dataRoute.code === "Ok") {
-                    let km = (dataRoute.routes[0].distance / 1000).toFixed(1);
-
-                    // Gán kết quả
-                    elDist.value = km;
-
-                    // UI: Thành công
-                    elStatus.innerText = `✅ Quãng đường: ${km} km`;
-                    elStatus.className = "text-success fw-bold";
-                    elIcon.innerHTML = '<i class="fa-solid fa-check text-success"></i>';
-
-                    // Tính tiền lần cuối
-                    calculateTotal();
-                }
-            } catch (err) {
-                console.warn("Lỗi tính toán tự động", err);
-                // Nếu lỗi thì reset nhẹ để người dùng biết
-                elStatus.innerText = "Không tự tính được. Hãy kiểm tra lại địa chỉ.";
-                elStatus.className = "text-warning";
-                elIcon.innerHTML = '<i class="fa-solid fa-exclamation text-warning"></i>';
-            }
-        }
     </script>
 
     <style>
