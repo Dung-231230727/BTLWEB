@@ -480,6 +480,29 @@
 
 @section Scripts {
     <script>
+        (function () {
+                        var btn = document.getElementById('backBtn');
+                        if (!btn) return;
+
+                        // prefer history.back if referrer exists and is same-origin
+                        try {
+                            var ref = document.referrer;
+                            if (ref) {
+                                var refUrl = new URL(ref, window.location.href);
+                                if (refUrl.origin === window.location.origin) {
+                                    btn.addEventListener('click', function (e) {
+                                        e.preventDefault();
+                                        history.back();
+                                    }, { once: true });
+                                    return;
+                                }
+                            }
+                        } catch (e) {
+                            // ignore and fall back to the href
+                        }
+
+                        // if no usable referrer, keep the fallback href (server computed)
+                    })();
         // 1. Hàm cập nhật trạng thái dùng chung cho các nút bấm
         function updateOrderStatus(orderId, status) {
             let actionName = "cập nhật trạng thái";
