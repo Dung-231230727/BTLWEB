@@ -396,6 +396,20 @@
             return R * c;
         }
         function deg2rad(deg) { return deg * (Math.PI / 180); }
+
+        const payerSelect = document.getElementById('PayerSelect');
+        const paymentMethodSelect = document.getElementById("PaymentMethod");
+        
+        function updatePaymentOptions() {
+            if (payerSelect.value === '2') { // Receiver pays
+                paymentMethodSelect.value = 'COD';
+                paymentMethodSelect.setAttribute('disabled', 'disabled');
+            } else {
+                paymentMethodSelect.removeAttribute('disabled');
+            }
+        }
+        payerSelect.addEventListener('change', updatePaymentOptions);
+        updatePaymentOptions();
     </script>
 
     <style>
