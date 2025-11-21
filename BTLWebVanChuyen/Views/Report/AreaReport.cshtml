@@ -1,18 +1,62 @@
-﻿@model List<BTLWebVanChuyen.Models.ViewModels.ReportViewModel>
+﻿@model List<BTLWebVanChuyen.Models.ViewModels.AreaReportViewModel>
 @{
     ViewData["Title"] = "Báo cáo theo khu vực";
 }
 
 <div class="mb-4 mt-3">
-    <h6 class="text-primary text-uppercase mb-1" style="letter-spacing: 1px;">Thống kê</h6>
-    <h2 class="text-dark fw-bold m-0"><i class="fa-solid fa-map-location me-2 text-primary"></i> @ViewData["Title"]</h2>
+    <h6 class="text-uppercase fw-bold text-muted mb-1">Báo cáo vận chuyển</h6>
+    <h2 class="fw-bold text-dark"><i class="fa-solid fa-map-location text-primary me-2"></i>@ViewData["Title"]</h2>
 </div>
 
-<div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+<!-- KPI Cards tổng -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-lg rounded-4 text-white" style="background: linear-gradient(135deg, #1E3C72, #2A5298);">
+            <div class="card-body">
+                <p class="small fw-bold text-white-50 text-uppercase">Tổng đơn hàng</p>
+                <h3 class="fw-bold">@Model.Sum(x => x.TotalOrders)</h3>
+                <i class="fa-solid fa-box fa-2x position-absolute top-0 end-0 p-3 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-lg rounded-4 text-white" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+            <div class="card-body">
+                <p class="small fw-bold text-white-50 text-uppercase">Giao thành công</p>
+                <h3 class="fw-bold">@Model.Sum(x => x.DeliveredOrders)</h3>
+                <i class="fa-solid fa-check-circle fa-2x position-absolute top-0 end-0 p-3 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-lg rounded-4 text-white" style="background: linear-gradient(135deg, #FF416C, #FF4B2B);">
+            <div class="card-body">
+                <p class="small fw-bold text-white-50 text-uppercase">Đơn hủy / Thất bại</p>
+                <h3 class="fw-bold">@Model.Sum(x => x.FailedOrders)</h3>
+                <i class="fa-solid fa-triangle-exclamation fa-2x position-absolute top-0 end-0 p-3 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-lg rounded-4 text-white" style="background: linear-gradient(135deg, #f7971e, #ffd200);">
+            <div class="card-body">
+                <p class="small fw-bold text-white-50 text-uppercase">Doanh thu</p>
+                <h3 class="fw-bold">@Model.Sum(x => x.TotalRevenue).ToString("N0") ₫</h3>
+                <i class="fa-solid fa-sack-dollar fa-2x position-absolute top-0 end-0 p-3 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Table chi tiết theo khu vực -->
+<div class="card shadow-lg rounded-4 overflow-hidden mb-4">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="bg-success text-white">
+                <thead class="bg-gradient text-white" style="background: linear-gradient(135deg, #1E3C72, #2A5298);">
                     <tr>
                         <th class="py-3 ps-4 border-0">Khu vực</th>
                         <th class="py-3 border-0 text-center">Tổng đơn</th>
@@ -24,27 +68,18 @@
                 <tbody>
                     @foreach (var item in Model)
                     {
-                        <tr class="border-bottom">
-                            <td class="ps-4 py-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
-                                        <i class="fa-solid fa-map-pin text-success"></i>
-                                    </div>
-                                    <span class="fw-bold text-dark">@item.AreaName</span>
-                                </div>
-                            </td>
+                        <tr>
+                            <td class="ps-4 py-3 fw-bold">@item.AreaName</td>
                             <td class="text-center fw-bold">@item.TotalOrders</td>
                             <td class="text-center text-success fw-bold">@item.DeliveredOrders</td>
                             <td class="text-center text-danger fw-bold">@item.FailedOrders</td>
-                            <td class="pe-4 text-end fw-bold text-warning">@item.TotalRevenue.ToString("N0") ₫</td>
+                            <td class="text-end fw-bold text-warning">@item.TotalRevenue.ToString("N0") ₫</td>
                         </tr>
                     }
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
-                                <i class="fa-solid fa-map-location-dot fa-2x mb-2"></i><br>Chưa có dữ liệu báo cáo.
-                            </td>
+                            <td colspan="5" class="text-center py-5 text-muted">Chưa có dữ liệu báo cáo.</td>
                         </tr>
                     }
                 </tbody>
@@ -52,3 +87,34 @@
         </div>
     </div>
 </div>
+
+<!-- Biểu đồ stacked bar theo khu vực -->
+<div class="card shadow-lg rounded-4 p-4">
+    <h5 class="fw-bold mb-3">Đơn hàng theo khu vực</h5>
+    <div id="areaChart"></div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script>
+        var categories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(x => x.AreaName)));
+        var deliveredData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(x => x.DeliveredOrders)));
+        var failedData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(x => x.FailedOrders)));
+
+        var options = {
+            chart: { type: 'bar', height: 350, stacked: true },
+            series: [
+                { name: 'Giao thành công', data: deliveredData },
+                { name: 'Thất bại', data: failedData }
+            ],
+            xaxis: { categories: categories },
+            colors: ['#11998e', '#FF416C'],
+            legend: { position: 'top' },
+            plotOptions: { bar: { borderRadius: 4, horizontal: false } },
+            dataLabels: { enabled: false }
+        };
+
+        var chart = new ApexCharts(document.querySelector("#areaChart"), options);
+        chart.render();
+    </script>
+}
