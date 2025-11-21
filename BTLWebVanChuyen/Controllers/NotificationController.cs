@@ -92,5 +92,33 @@ namespace BTLWebVanChuyen.Controllers
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+
+        // Chuyển đến chi tiết đơn hàng từ thông báo
+        public async Task<IActionResult> ViewOrder(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge();
+
+            var noti = await _context.Notifications
+                .FirstOrDefaultAsync(n => n.NotificationId == id && n.UserId == user.Id);
+
+            if (noti == null) return NotFound();
+
+            // Đánh dấu thông báo đã đọc nếu chưa đọc
+            if (!noti.IsRead)
+            {
+                noti.IsRead = true;
+                await _context.SaveChangesAsync();
+            }
+
+            // Nếu thông báo có liên quan đến đơn hàng, chuyển đến chi tiết đơn hàng
+            if (noti.OrderId.HasValue)
+            {
+                return RedirectToAction("Details", "Order", new { id = noti.OrderId.Value });
+            }
+
+            // Nếu không có đơn hàng liên quan, quay về trang thông báo
+            return RedirectToAction(nameof(Index));
+        }
     }
 }
