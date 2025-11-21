@@ -54,6 +54,16 @@ namespace BTLWebVanChuyen.Models
 
         // ===== HỦY =====
         [Display(Name = "Đã hủy")]
-        Cancelled = 15
+        Cancelled = 15,
+
+        // === [MỚI] QUY TRÌNH HOÀN TRẢ CHI TIẾT ===
+        [Display(Name = "Đã về kho lấy (chờ hoàn trả)")]
+        ArrivedPickupTerminal = 16,
+
+        [Display(Name = "Đã giao shipper hoàn trả")]
+        AssignedReturnShipper = 17,
+
+        [Display(Name = "Đang hoàn trả về người gửi")]
+        ReturningToSender = 18
     }
 }

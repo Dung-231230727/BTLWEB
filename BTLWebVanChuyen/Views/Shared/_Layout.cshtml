@@ -192,9 +192,10 @@
                                         <form asp-action="Logout" asp-controller="Auth" method="post">
                                             <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-power-off me-2"></i> Đăng xuất</button>
                                         </form>
-                                        <form asp-action="" asp-controller="" method="post">
-                                            <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-user me-2"></i> Tài khoản</button>
-                                        </form>
+                                        <a class="dropdown-item text-danger" href="@Url.Action("Info", "Customer")">
+                                            <i class="fa-solid fa-user me-2"></i> Tài khoản
+                                        </a>
+
                                     </li>
                                 </ul>
                             </div>

@@ -1,0 +1,448 @@
+﻿@model BTLWebVanChuyen.Models.Customer
+
+
+
+@{
+
+    ViewData["Title"] = "Thông tin tài khoản";
+
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+}
+
+
+
+<style>
+
+    /* Card và header */
+
+    .profile-card {
+        border-radius: 12px;
+        overflow: hidden;
+        border: none;
+    }
+
+
+
+    .profile-header {
+        background: linear-gradient(135deg, #007bff, #0056d2);
+        color: white;
+    }
+
+
+
+        .profile-header h3 {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+
+
+    /* Section title */
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #555;
+        border-left: 4px solid #0d6efd;
+        padding-left: 10px;
+        margin-bottom: 20px;
+    }
+
+
+
+    /* Input style */
+
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 6px rgba(13, 110, 253, 0.25);
+    }
+
+
+
+    .input-group-text {
+        background-color: #f0f0f0;
+    }
+
+
+
+    .input-group:hover .form-control {
+        border-color: #0d6efd;
+    }
+
+
+
+    /* Button hover */
+
+    .btn-success {
+        transition: 0.2s;
+    }
+
+
+
+        .btn-success:hover {
+            transform: scale(1.05);
+        }
+
+
+
+    /* Alert animation */
+
+    /* Alert animation */
+
+    .alert {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1050;
+        min-width: 250px;
+        opacity: 0; /* bắt đầu ẩn */
+    }
+
+
+
+    /* Slide từ trên xuống + bounce */
+
+    @@keyframes slideBounce {
+        0%
+
+    {
+        opacity: 0;
+        transform: translate(-50%, -50px);
+    }
+
+    60% {
+        opacity: 1;
+        transform: translate(-50%, 10px);
+    }
+
+    80% {
+        transform: translate(-50%, -5px);
+    }
+
+    100% {
+        transform: translate(-50%, 0);
+        opacity: 1; /* <--- QUAN TRỌNG: Phải thêm dòng này để giữ nó hiện */
+    }
+
+    }
+
+
+
+    /* Gán animation */
+
+    .alert-show {
+        animation: slideBounce 0.7s ease forwards;
+    }
+
+</style>
+
+
+
+<div class="container py-4">
+
+    <div class="card shadow profile-card">
+
+
+
+        <!-- Header -->
+
+        <div class="card-header text-center py-4 profile-header">
+
+            <h3 class="mb-0 text-uppercase">
+
+                <i class="fas fa-user-circle me-2"></i> Thông tin tài khoản
+
+            </h3>
+
+        </div>
+
+
+
+        <div class="card-body p-4">
+
+
+
+            <!-- Alerts -->
+            @if (TempData["Success"] != null)
+
+            {
+
+                <div class="alert alert-success alert-dismissible fade show alert-show" role="alert">
+
+                    <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
+
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+
+                </div>
+
+            }
+
+
+
+            @if (TempData["Error"] != null)
+
+            {
+
+                <div class="alert alert-danger alert-dismissible fade show alert-show" role="alert">
+
+                    <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Error"]
+
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+
+                </div>
+
+            }
+
+
+
+            <form asp-action="Info" method="post">
+
+                <input type="hidden" asp-for="Id" />
+
+                <input type="hidden" asp-for="UserId" />
+
+
+
+                <!-- Thông tin chung -->
+
+                <h5 class="section-title"><i class="fas fa-info-circle me-2"></i>Thông tin chung</h5>
+
+
+
+                <div class="row g-4">
+
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-semibold">Họ và tên</label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+
+                            <input asp-for="User.FullName" class="form-control" required />
+
+                        </div>
+
+                        <span asp-validation-for="User.FullName" class="text-danger"></span>
+
+                    </div>
+
+
+
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-semibold">Email</label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+
+                            <input asp-for="User.Email" type="email" class="form-control" required />
+
+                        </div>
+
+                        <span asp-validation-for="User.Email" class="text-danger"></span>
+
+                    </div>
+
+
+
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-semibold">Số điện thoại</label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text"><i class="fas fa-phone-alt"></i></span>
+
+                            <input asp-for="User.PhoneNumber" class="form-control" />
+
+                        </div>
+
+                        <span asp-validation-for="User.PhoneNumber" class="text-danger"></span>
+
+                    </div>
+
+
+
+                    <div class="col-md-6">
+
+                        <label class="form-label fw-semibold">Địa chỉ</label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+
+                            <input asp-for="Address" class="form-control" data-val=" false" />
+
+                        </div>
+
+                        <span asp-validation-for="Address" class="text-danger"></span>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Đổi mật khẩu -->
+
+                <h5 class="section-title mt-5">
+
+                    <i class="fas fa-lock me-2"></i>Đổi mật khẩu (Không bắt buộc)
+
+                </h5>
+
+
+
+                <div class="row g-4">
+
+                    <div class="col-md-4">
+
+                        <label class="form-label fw-semibold">Mật khẩu hiện tại</label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text"><i class="fas fa-key"></i></span>
+
+                            <input type="password" name="currentPassword" id="currentPass" class="form-control" autocomplete="off" />
+
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePass('currentPass', this)" title="Hiển thị/ẩn mật khẩu">
+
+                                <i class="fas fa-eye"></i>
+
+                            </button>
+
+                        </div>
+
+                        <small class="text-muted">Nhập nếu muốn đổi mật khẩu.</small>
+
+                    </div>
+
+
+
+                    <div class="col-md-4">
+
+                        <label class="form-label fw-semibold">Mật khẩu mới</label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+
+                            <input type="password" name="newPassword" id="newPass" class="form-control" autocomplete="off" />
+
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePass('newPass', this)" title="Hiển thị/ẩn mật khẩu">
+
+                                <i class="fas fa-eye"></i>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="col-md-4">
+
+                        <label class="form-label fw-semibold">Xác nhận mật khẩu mới</label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text"><i class="fas fa-check"></i></span>
+
+                            <input type="password" name="confirmPassword" id="confirmPass" class="form-control" autocomplete="off" />
+
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePass('confirmPass', this)" title="Hiển thị/ẩn mật khẩu">
+
+                                <i class="fas fa-eye"></i>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Nút lưu -->
+
+                <div class="d-flex justify-content-end mt-4">
+
+                    <button type="submit" class="btn btn-success px-4 py-2 shadow fw-semibold">
+
+                        <i class="fas fa-save me-2"></i> Lưu thay đổi
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+@section Scripts {
+
+    <script>
+
+        // Toggle password visibility
+
+        function togglePass(fieldId, btn) {
+
+            var input = document.getElementById(fieldId);
+
+            var icon = btn.querySelector('i');
+
+            if (input.type === "password") {
+
+                input.type = "text";
+
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+
+            } else {
+
+                input.type = "password";
+
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+
+            }
+
+        }
+
+
+
+        // Tự ẩn alert sau 3s
+
+        setTimeout(function () {
+
+            const alerts = document.querySelectorAll('.alert');
+
+            alerts.forEach(a => {
+
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(a);
+
+                bsAlert.close();
+
+            });
+
+        }, 1000);
+
+
+
+    </script>
+
+
+
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+
+}
