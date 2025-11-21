@@ -1,32 +1,27 @@
-﻿@model List<BTLWebVanChuyen.Models.ViewModels.ReportViewModel>
+﻿@model List<BTLWebVanChuyen.Models.ViewModels.DailyReportViewModel>
 @{
     ViewData["Title"] = "Báo cáo theo ngày";
 }
 
 <div class="mb-4 mt-3">
-    <h6 class="text-primary text-uppercase mb-1" style="letter-spacing: 1px;">Thống kê</h6>
-    <h2 class="text-dark fw-bold m-0"><i class="fa-solid fa-calendar-day me-2 text-primary"></i> @ViewData["Title"]</h2>
+    <h6 class="text-uppercase fw-bold text-muted mb-1">Báo cáo vận chuyển</h6>
+    <h2 class="fw-bold text-dark"><i class="fa-solid fa-calendar-day text-primary me-2"></i>@ViewData["Title"]</h2>
 </div>
 
-<div class="card shadow-sm border-0 rounded-4 mb-4 bg-light">
+<!-- Filter form -->
+<div class="card shadow-sm mb-4 rounded-4 border-0">
     <div class="card-body p-4">
         <form method="get" class="row g-3 align-items-end">
             <div class="col-md-4">
                 <label class="form-label fw-bold text-secondary small text-uppercase">Từ ngày</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-0"><i class="fa-solid fa-calendar text-muted"></i></span>
-                    <input type="date" name="fromDate" class="form-control border-0" value="@ViewBag.FromDate" />
-                </div>
+                <input type="date" class="form-control" name="fromDate" value="@ViewBag.FromDate" />
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold text-secondary small text-uppercase">Đến ngày</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-0"><i class="fa-solid fa-calendar text-muted"></i></span>
-                    <input type="date" name="toDate" class="form-control border-0" value="@ViewBag.ToDate" />
-                </div>
+                <input type="date" class="form-control" name="toDate" value="@ViewBag.ToDate" />
             </div>
             <div class="col-md-4">
-                <button type="submit" class="btn btn-primary w-100 fw-bold py-2 rounded-3 shadow-sm">
+                <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
                     <i class="fa-solid fa-filter me-2"></i>Lọc dữ liệu
                 </button>
             </div>
@@ -34,40 +29,106 @@
     </div>
 </div>
 
-<div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-primary text-white">
-                    <tr>
-                        <th class="py-3 ps-4 border-0">Ngày</th>
-                        <th class="py-3 border-0 text-center">Tổng đơn</th>
-                        <th class="py-3 border-0 text-center">Thành công</th>
-                        <th class="py-3 border-0 text-center">Thất bại/Hủy</th>
-                        <th class="py-3 pe-4 border-0 text-end">Doanh thu</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model)
-                    {
-                        <tr class="border-bottom">
-                            <td class="ps-4 py-3 fw-bold text-primary">@(item.ReportDate.HasValue? item.ReportDate.Value.ToString("dd/MM/yyyy") : "")</td>
-                            <td class="text-center fw-bold">@item.TotalOrders</td>
-                            <td class="text-center text-success fw-bold">@item.DeliveredOrders</td>
-                            <td class="text-center text-danger fw-bold">@item.FailedOrders</td>
-                            <td class="pe-4 text-end fw-bold text-warning">@item.TotalRevenue.ToString("N0") ₫</td>
-                        </tr>
-                    }
-                    @if (!Model.Any())
-                    {
-                        <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
-                                <i class="fa-solid fa-chart-simple fa-2x mb-2"></i><br>Không có dữ liệu cho khoảng thời gian này.
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+<!-- KPI Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-lg rounded-4 text-white" style="background: linear-gradient(135deg, #1E3C72, #2A5298);">
+            <div class="card-body">
+                <p class="small fw-bold text-white-50 text-uppercase">Tổng đơn hàng</p>
+                <h3 class="fw-bold">@Model.Sum(x => x.TotalOrders)</h3>
+                <i class="fa-solid fa-box fa-2x position-absolute top-0 end-0 p-3 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-lg rounded-4 text-white" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+            <div class="card-body">
+                <p class="small fw-bold text-white-50 text-uppercase">Giao thành công</p>
+                <h3 class="fw-bold">@Model.Sum(x => x.DeliveredOrders)</h3>
+                <i class="fa-solid fa-check-circle fa-2x position-absolute top-0 end-0 p-3 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-lg rounded-4 text-white" style="background: linear-gradient(135deg, #FF416C, #FF4B2B);">
+            <div class="card-body">
+                <p class="small fw-bold text-white-50 text-uppercase">Đơn hủy / Thất bại</p>
+                <h3 class="fw-bold">@Model.Sum(x => x.FailedOrders)</h3>
+                <i class="fa-solid fa-triangle-exclamation fa-2x position-absolute top-0 end-0 p-3 opacity-25"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-lg rounded-4 text-white" style="background: linear-gradient(135deg, #f7971e, #ffd200);">
+            <div class="card-body">
+                <p class="small fw-bold text-white-50 text-uppercase">Doanh thu</p>
+                <h3 class="fw-bold">@Model.Sum(x => x.TotalRevenue).ToString("N0") ₫</h3>
+                <i class="fa-solid fa-sack-dollar fa-2x position-absolute top-0 end-0 p-3 opacity-25"></i>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Charts -->
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card shadow-lg rounded-4 p-4">
+            <h5 class="fw-bold mb-3">Đơn hàng theo ngày</h5>
+            <div id="dailyOrdersChart"></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-lg rounded-4 p-4">
+            <h5 class="fw-bold mb-3">Trạng thái đơn hàng</h5>
+            <div id="statusChart"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script>
+        // Prepare data
+        var labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(x => x.ReportDate?.ToString("dd/MM/yyyy") ?? "")));
+        var totalOrders = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(x => x.TotalOrders)));
+        var deliveredOrders = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(x => x.DeliveredOrders)));
+        var failedOrders = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(x => x.FailedOrders)));
+
+        // Line chart for daily orders
+        var dailyChartOptions = {
+            chart: { type: 'line', height: 350, toolbar: { show: true } },
+            series: [
+                { name: 'Tổng đơn', data: totalOrders },
+                { name: 'Giao thành công', data: deliveredOrders },
+                { name: 'Thất bại', data: failedOrders }
+            ],
+            xaxis: { categories: labels },
+            stroke: { curve: 'smooth', width: 3 },
+            markers: { size: 5 },
+            colors: ['#1E3C72', '#11998e', '#FF416C'],
+            legend: { position: 'top' }
+        };
+
+        var dailyChart = new ApexCharts(document.querySelector("#dailyOrdersChart"), dailyChartOptions);
+        dailyChart.render();
+
+        // Pie chart for status
+        var totalDelivered = deliveredOrders.reduce((a,b)=>a+b,0);
+        var totalFailed = failedOrders.reduce((a,b)=>a+b,0);
+        var totalPending = totalOrders.reduce((a,b,i)=>a+b-(deliveredOrders[i]+failedOrders[i]),0);
+
+        var statusChartOptions = {
+            chart: { type: 'donut', height: 300 },
+            series: [totalDelivered, totalFailed, totalPending],
+            labels: ['Thành công', 'Thất bại', 'Đang xử lý'],
+            colors: ['#11998e', '#FF416C', '#FFD700'],
+            legend: { position: 'bottom' }
+        };
+
+        var statusChart = new ApexCharts(document.querySelector("#statusChart"), statusChartOptions);
+        statusChart.render();
+    </script>
+}

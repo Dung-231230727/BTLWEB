@@ -1,6 +1,7 @@
 ﻿using BTLWebVanChuyen.Data;
 using BTLWebVanChuyen.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,10 +11,54 @@ namespace BTLWebVanChuyen.Controllers
     public class AreaController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public AreaController(ApplicationDbContext context)
+        public AreaController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
+        }
+
+        // Helper: Lấy tất cả admin users
+        private async Task<List<string>> GetAdminUserIdsAsync()
+        {
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            return adminUsers.Select(u => u.Id).ToList();
+        }
+
+        // Helper: Tạo thông báo
+        private async Task CreateNotificationAsync(string userId, string message, int? orderId = null)
+        {
+            if (string.IsNullOrWhiteSpace(userId)) return;
+            _context.Notifications.Add(new Notification
+            {
+                UserId = userId,
+                Message = message,
+                OrderId = orderId,
+                CreatedAt = DateTime.Now,
+                IsRead = false
+            });
+            await _context.SaveChangesAsync();
+        }
+
+        // Helper: Tạo thông báo cho nhiều users
+        private async Task CreateNotificationsAsync(IEnumerable<string> userIds, string message, int? orderId = null)
+        {
+            var recipients = userIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+            if (!recipients.Any() || string.IsNullOrWhiteSpace(message)) return;
+
+            foreach (var uid in recipients)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = uid,
+                    Message = message,
+                    OrderId = orderId,
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                });
+            }
+            await _context.SaveChangesAsync();
         }
 
         // INDEX: Tìm kiếm
@@ -56,6 +101,12 @@ namespace BTLWebVanChuyen.Controllers
             {
                 _context.Add(area);
                 await _context.SaveChangesAsync();
+                
+                // Thông báo cho admin
+                var adminUserIds = await GetAdminUserIdsAsync();
+                await CreateNotificationsAsync(adminUserIds, 
+                    $"Khu vực '{area.AreaName}' đã được thêm mới vào hệ thống.");
+                
                 TempData["Message"] = "Thêm khu vực thành công!";
                 return RedirectToAction(nameof(Index));
             }
@@ -86,8 +137,26 @@ namespace BTLWebVanChuyen.Controllers
             {
                 try
                 {
+                    var oldArea = await _context.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.AreaId == id);
                     _context.Update(area);
                     await _context.SaveChangesAsync();
+                    
+                    // Thông báo cho admin
+                    var adminUserIds = await GetAdminUserIdsAsync();
+                    await CreateNotificationsAsync(adminUserIds, 
+                        $"Khu vực '{area.AreaName}' đã được cập nhật.");
+                    
+                    // Thông báo cho employees trong khu vực này
+                    var employeeUserIds = await _context.Employees
+                        .Where(e => e.AreaId == area.AreaId)
+                        .Select(e => e.UserId)
+                        .ToListAsync();
+                    if (employeeUserIds.Any())
+                    {
+                        await CreateNotificationsAsync(employeeUserIds,
+                            $"Khu vực làm việc của bạn '{area.AreaName}' đã được cập nhật.");
+                    }
+                    
                     TempData["Message"] = "Cập nhật thành công!";
                 }
                 catch (DbUpdateConcurrencyException)
@@ -128,8 +197,39 @@ namespace BTLWebVanChuyen.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            var areaName = area.AreaName;
+            
+            // Thông báo cho employees trong khu vực này trước khi xóa
+            var employeeUserIds = await _context.Employees
+                .Where(e => e.AreaId == id)
+                .Select(e => e.UserId)
+                .ToListAsync();
+            if (employeeUserIds.Any())
+            {
+                await CreateNotificationsAsync(employeeUserIds,
+                    $"Khu vực làm việc của bạn '{areaName}' đã bị xóa khỏi hệ thống.");
+            }
+            
+            // Thông báo cho customers có đơn hàng trong khu vực này
+            var customerUserIds = await _context.Orders
+                .Where(o => o.PickupAreaId == id || o.DeliveryAreaId == id)
+                .Select(o => o.Customer.UserId)
+                .Distinct()
+                .ToListAsync();
+            if (customerUserIds.Any())
+            {
+                await CreateNotificationsAsync(customerUserIds,
+                    $"Khu vực '{areaName}' liên quan đến đơn hàng của bạn đã bị xóa khỏi hệ thống.");
+            }
+            
             _context.Areas.Remove(area);
             await _context.SaveChangesAsync();
+            
+            // Thông báo cho admin
+            var adminUserIds = await GetAdminUserIdsAsync();
+            await CreateNotificationsAsync(adminUserIds, 
+                $"Khu vực '{areaName}' đã bị xóa khỏi hệ thống.");
+            
             TempData["Message"] = "Xóa khu vực thành công.";
             return RedirectToAction(nameof(Index));
         }
