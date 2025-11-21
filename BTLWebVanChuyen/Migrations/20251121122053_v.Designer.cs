@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BTLWebVanChuyen.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251120165203_v")]
+    [Migration("20251121122053_v")]
     partial class v
     {
         /// <inheritdoc />
