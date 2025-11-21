@@ -125,6 +125,30 @@ namespace BTLWebVanChuyen.Controllers
                     _context.Employees.Add(employee);
                     await _context.SaveChangesAsync();
 
+                    // Thông báo cho admin
+                    var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+                    foreach (var admin in adminUsers)
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            UserId = admin.Id,
+                            Message = $"Nhân viên '{user.FullName}' ({role}) đã được thêm vào hệ thống.",
+                            CreatedAt = DateTime.Now,
+                            IsRead = false
+                        });
+                    }
+                    
+                    // Thông báo cho nhân viên mới
+                    _context.Notifications.Add(new Notification
+                    {
+                        UserId = user.Id,
+                        Message = $"Tài khoản nhân viên của bạn đã được tạo. Vai trò: {role}.",
+                        CreatedAt = DateTime.Now,
+                        IsRead = false
+                    });
+                    
+                    await _context.SaveChangesAsync();
+
                     TempData["Message"] = "Thêm nhân viên thành công.";
                     return RedirectToAction(nameof(Index));
                 }
@@ -190,6 +214,34 @@ namespace BTLWebVanChuyen.Controllers
             {
                 _context.Update(empDb);
                 await _context.SaveChangesAsync();
+                
+                // Thông báo cho admin
+                var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+                foreach (var admin in adminUsers)
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        UserId = admin.Id,
+                        Message = $"Thông tin nhân viên '{empDb.User?.FullName}' đã được cập nhật.",
+                        CreatedAt = DateTime.Now,
+                        IsRead = false
+                    });
+                }
+                
+                // Thông báo cho nhân viên bị ảnh hưởng
+                if (empDb.UserId != null)
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        UserId = empDb.UserId,
+                        Message = $"Thông tin tài khoản của bạn đã được cập nhật bởi quản trị viên.",
+                        CreatedAt = DateTime.Now,
+                        IsRead = false
+                    });
+                }
+                
+                await _context.SaveChangesAsync();
+                
                 TempData["Message"] = "Cập nhật thành công.";
             }
             catch (DbUpdateConcurrencyException)
@@ -226,6 +278,33 @@ namespace BTLWebVanChuyen.Controllers
                 TempData["Error"] = "Không thể xóa nhân viên này vì đang phụ trách đơn hàng.";
                 return RedirectToAction(nameof(Index));
             }
+
+            var employeeName = emp.User?.FullName ?? "Nhân viên";
+            var employeeUserId = emp.UserId;
+            
+            // Thông báo cho nhân viên trước khi xóa
+            _context.Notifications.Add(new Notification
+            {
+                UserId = employeeUserId,
+                Message = $"Tài khoản nhân viên của bạn đã bị xóa khỏi hệ thống bởi quản trị viên.",
+                CreatedAt = DateTime.Now,
+                IsRead = false
+            });
+            
+            // Thông báo cho admin
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            foreach (var admin in adminUsers)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = admin.Id,
+                    Message = $"Nhân viên '{employeeName}' đã bị xóa khỏi hệ thống.",
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                });
+            }
+            
+            await _context.SaveChangesAsync();
 
             // Xóa tài khoản Identity
             var user = await _userManager.FindByIdAsync(emp.UserId);
