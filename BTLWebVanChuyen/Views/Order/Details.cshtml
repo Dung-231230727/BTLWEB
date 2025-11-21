@@ -470,13 +470,8 @@
             </div>
 
             <div class="card-footer bg-light p-3 text-center rounded-bottom-4">
-                @{
-                    string backController = "Order";
-                    string backAction = "Index";
-                    if (!User.Identity!.IsAuthenticated) { backController = "Home"; backAction = "Index"; }
-                    else if (User.IsInRole("Customer")) { backController = "Order"; backAction = "MyOrders"; }
-                }
-                <a asp-controller="@backController" asp-action="@backAction" class="btn btn-outline-secondary rounded-pill px-4 fw-bold hover-top">
+                @* Dùng onclick gọi hàm goBack() *@
+                <a href="javascript:void(0);" onclick="goBack()" class="btn btn-outline-secondary rounded-pill px-4 fw-bold hover-top">
                     <i class="fa-solid fa-arrow-left me-2"></i>Quay lại
                 </a>
             </div>
@@ -553,5 +548,17 @@
             $.post($(this).attr('action'), $(this).serialize())
              .done(function(res) { if(res.success) location.reload(); else alert(res.message); });
         });
+
+        // Hàm xử lý quay lại trang trước thông minh
+        function goBack() {
+            // Kiểm tra nếu có lịch sử duyệt web (document.referrer khác rỗng)
+            if (document.referrer && document.referrer.indexOf(window.location.host) !== -1) {
+                history.back();
+            } else {
+                // Trường hợp mở tab mới hoặc nhập trực tiếp URL -> Quay về trang chủ hoặc danh sách đơn
+                // Bạn có thể đổi thành '@Url.Action("Index", "Order")' nếu muốn về danh sách đơn
+                window.location.href = '@Url.Action("Index", "Home")';
+            }
+        }
     </script>
 }

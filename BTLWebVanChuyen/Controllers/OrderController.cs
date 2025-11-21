@@ -721,19 +721,25 @@ namespace BTLWebVanChuyen.Controllers
         [HttpPost, AllowAnonymous]
         public async Task<IActionResult> Tracking(string trackingCode)
         {
-            if (string.IsNullOrWhiteSpace(trackingCode)) { ViewBag.Error = "Vui lòng nhập mã vận đơn."; return View(); }
+            if (string.IsNullOrWhiteSpace(trackingCode))
+            {
+                ViewBag.Error = "Vui lòng nhập mã vận đơn.";
+                return View();
+            }
 
-            var order = await _context.Orders
-                .Include(o => o.Customer).ThenInclude(c => c.User)
-                .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
-                .Include(o => o.Shipper).ThenInclude(s => s!.User)
-                .Include(o => o.PickupArea)
-                .Include(o => o.DeliveryArea)
-                .Include(o => o.OrderLogs)
-                .FirstOrDefaultAsync(o => o.TrackingCode == trackingCode);
+            // Tìm đơn hàng theo mã vận đơn
+            // Lưu ý: Không cần Include quá nhiều dữ liệu ở đây vì Action Details sẽ load lại đầy đủ
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.TrackingCode == trackingCode);
 
-            if (order == null) { ViewBag.Error = "Không tìm thấy đơn hàng."; return View(); }
-            return View("Details", order);
+            if (order == null)
+            {
+                ViewBag.Error = "Không tìm thấy đơn hàng.";
+                return View();
+            }
+
+            // KHẮC PHỤC LỖI: Chuyển hướng sang Action Details (GET) 
+            // Thay vì trả về View trực tiếp, giúp tránh lỗi "Confirm Form Resubmission" khi F5
+            return RedirectToAction("Details", new { id = order.Id });
         }
 
         // ============================
@@ -745,7 +751,8 @@ namespace BTLWebVanChuyen.Controllers
             var order = await _context.Orders.FindAsync(id);
             if (order == null || order.PaymentStatus == PaymentStatus.Paid) return NotFound();
 
-            if (order.Payer != PayerType.Sender || order.PaymentMethod != "Online" || order.PaymentStatus != PaymentStatus.ProcessingOnline)
+            // Sửa: Cho phép thanh toán lại nếu trạng thái là Unpaid hoặc ProcessingOnline
+            if (order.Payer != PayerType.Sender || order.PaymentMethod != "Online")
             {
                 TempData["Error"] = "Đơn hàng không đủ điều kiện thanh toán Online.";
                 return RedirectToAction("Details", new { id });
@@ -754,20 +761,27 @@ namespace BTLWebVanChuyen.Controllers
             var vnPay = new VnPayLibrary();
             var vnpayConfig = _configuration.GetSection("VnPay");
 
-            vnPay.AddRequestData("vnp_Version", vnpayConfig["Version"]!);
-            vnPay.AddRequestData("vnp_Command", vnpayConfig["Command"]!);
-            vnPay.AddRequestData("vnp_TmnCode", vnpayConfig["TmnCode"]!);
+            vnPay.AddRequestData("vnp_Version", "2.1.0");
+            vnPay.AddRequestData("vnp_Command", "pay");
+            vnPay.AddRequestData("vnp_TmnCode", vnpayConfig["TmnCode"] ?? "");
             vnPay.AddRequestData("vnp_Amount", ((long)order.TotalPrice * 100).ToString());
             vnPay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
-            vnPay.AddRequestData("vnp_CurrCode", vnpayConfig["CurrCode"]!);
-            vnPay.AddRequestData("vnp_IpAddr", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1");
-            vnPay.AddRequestData("vnp_Locale", vnpayConfig["Locale"]!);
-            vnPay.AddRequestData("vnp_OrderInfo", "Thanh toan don: " + order.TrackingCode);
-            vnPay.AddRequestData("vnp_OrderType", "other");
-            vnPay.AddRequestData("vnp_ReturnUrl", vnpayConfig["ReturnUrl"]!);
-            vnPay.AddRequestData("vnp_TxnRef", order.Id.ToString());
+            vnPay.AddRequestData("vnp_CurrCode", "VND");
 
-            return Redirect(vnPay.CreateRequestUrl(vnpayConfig["BaseUrl"]!, vnpayConfig["HashSecret"]!));
+            // Sửa: Lấy IP, nếu localhost ::1 thì lấy 127.0.0.1
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            if (string.IsNullOrEmpty(ipAddress) || ipAddress == "::1") ipAddress = "127.0.0.1";
+            vnPay.AddRequestData("vnp_IpAddr", ipAddress);
+
+            vnPay.AddRequestData("vnp_Locale", "vn");
+            vnPay.AddRequestData("vnp_OrderInfo", "Thanh toan don hang:" + order.TrackingCode);
+            vnPay.AddRequestData("vnp_OrderType", "other");
+            vnPay.AddRequestData("vnp_ReturnUrl", vnpayConfig["ReturnUrl"] ?? "");
+
+            // Sửa: Thêm Tick vào TxnRef để tránh lỗi trùng lặp khi thanh toán lại
+            vnPay.AddRequestData("vnp_TxnRef", $"{order.Id}_{DateTime.Now.Ticks}");
+
+            return Redirect(vnPay.CreateRequestUrl(vnpayConfig["BaseUrl"] ?? "", vnpayConfig["HashSecret"] ?? ""));
         }
 
         [AllowAnonymous]
@@ -777,16 +791,25 @@ namespace BTLWebVanChuyen.Controllers
             var vnpay = new VnPayLibrary();
             foreach (var (key, value) in Request.Query)
             {
-                if (!string.IsNullOrEmpty(key) && key.StartsWith("vnp_")) vnpay.AddResponseData(key, value.ToString());
+                if (!string.IsNullOrEmpty(key) && key.StartsWith("vnp_"))
+                {
+                    vnpay.AddResponseData(key, value.ToString());
+                }
             }
 
-            if (!int.TryParse(vnpay.GetResponseData("vnp_TxnRef"), out int orderId)) return RedirectToAction("Index");
+            // Sửa: Tách OrderId từ vnp_TxnRef (dạng OrderId_Ticks)
+            var vnp_TxnRef = vnpay.GetResponseData("vnp_TxnRef");
+            var orderIdStr = vnp_TxnRef.Split('_')[0];
+
+            if (!int.TryParse(orderIdStr, out int orderId)) return RedirectToAction("Index");
 
             var order = await _context.Orders.FindAsync(orderId);
             if (order == null) return NotFound();
 
-            string vnp_SecureHash = Request.Query["vnp_SecureHash"]!;
-            if (vnpay.ValidateSignature(vnp_SecureHash, vnpayConfig["HashSecret"]!))
+            string vnp_SecureHash = Request.Query["vnp_SecureHash"].ToString(); // Sửa: đảm bảo .ToString()
+            bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, vnpayConfig["HashSecret"] ?? "");
+
+            if (checkSignature)
             {
                 if (vnpay.GetResponseData("vnp_ResponseCode") == "00")
                 {
@@ -794,21 +817,32 @@ namespace BTLWebVanChuyen.Controllers
                     {
                         order.PaymentStatus = PaymentStatus.Paid;
                         order.PaymentMethod = "Online";
+                        // Lưu mã giao dịch đầy đủ của VNPay
                         order.PaymentTransactionId = vnpay.GetResponseData("vnp_TransactionNo");
+
                         _context.Update(order);
                         await _context.SaveChangesAsync();
 
+                        // ... (Giữ nguyên phần gửi thông báo) ...
                         var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
                         if (!string.IsNullOrWhiteSpace(customerUserId))
                         {
                             await CreateNotificationAsync(customerUserId, $"Thanh toán Online cho đơn {order.TrackingCode} đã thành công.", order.Id);
                         }
+
                         TempData["Message"] = "Thanh toán thành công.";
                     }
                 }
-                else TempData["Error"] = "Thanh toán thất bại: " + vnpay.GetResponseData("vnp_ResponseCode");
+                else
+                {
+                    // Mã lỗi từ VNPay
+                    TempData["Error"] = "Thanh toán thất bại. Mã lỗi: " + vnpay.GetResponseData("vnp_ResponseCode");
+                }
             }
-            else TempData["Error"] = "Sai chữ ký bảo mật.";
+            else
+            {
+                TempData["Error"] = "Có lỗi xảy ra trong quá trình xử lý (Sai chữ ký bảo mật).";
+            }
 
             return RedirectToAction("Details", new { id = orderId });
         }

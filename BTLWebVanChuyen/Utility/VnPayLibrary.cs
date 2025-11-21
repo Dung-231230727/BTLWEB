@@ -1,11 +1,10 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using System.Globalization;
 
 namespace BTLWebVanChuyen.Utility
 {
-    // Class tiện ích giúp tạo URL và xác thực chữ ký VNPay
     public class VnPayLibrary
     {
         private readonly SortedList<string, string> _requestData = new SortedList<string, string>(new VnPayCompare());
@@ -33,11 +32,17 @@ namespace BTLWebVanChuyen.Utility
             {
                 if (!string.IsNullOrEmpty(kv.Value))
                 {
-                    if (data.Length > 0) data.Append("&");
-                    data.Append(kv.Key + "=" + WebUtility.UrlEncode(kv.Value));
+                    data.Append(WebUtility.UrlEncode(kv.Key) + "=" + WebUtility.UrlEncode(kv.Value) + "&");
                 }
             }
+
+            // Bỏ ký tự '&' cuối cùng
             string queryString = data.ToString();
+            if (queryString.Length > 0)
+            {
+                queryString = queryString.Remove(queryString.Length - 1, 1);
+            }
+
             string vnp_SecureHash = HmacSHA512(vnp_HashSecret, queryString);
             return baseUrl + "?" + queryString + "&vnp_SecureHash=" + vnp_SecureHash;
         }
@@ -52,7 +57,6 @@ namespace BTLWebVanChuyen.Utility
         private string GetResponseData()
         {
             StringBuilder data = new StringBuilder();
-            // Loại bỏ các trường không cần thiết trước khi tạo chuỗi Raw
             if (_responseData.ContainsKey("vnp_SecureHashType")) _responseData.Remove("vnp_SecureHashType");
             if (_responseData.ContainsKey("vnp_SecureHash")) _responseData.Remove("vnp_SecureHash");
 
@@ -60,9 +64,14 @@ namespace BTLWebVanChuyen.Utility
             {
                 if (!string.IsNullOrEmpty(kv.Value))
                 {
-                    if (data.Length > 0) data.Append("&");
-                    data.Append(kv.Key + "=" + WebUtility.UrlEncode(kv.Value));
+                    data.Append(WebUtility.UrlEncode(kv.Key) + "=" + WebUtility.UrlEncode(kv.Value) + "&");
                 }
+            }
+
+            // Bỏ ký tự '&' cuối cùng
+            if (data.Length > 0)
+            {
+                data.Remove(data.Length - 1, 1);
             }
             return data.ToString();
         }
@@ -84,7 +93,7 @@ namespace BTLWebVanChuyen.Utility
         }
     }
 
-    // Class so sánh đặc biệt cho VNPay (sắp xếp theo thứ tự từ điển)
+    // Class so sánh tên tham số để sắp xếp đúng chuẩn VNPay
     public class VnPayCompare : IComparer<string>
     {
         public int Compare(string? x, string? y)
