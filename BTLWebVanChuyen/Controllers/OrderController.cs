@@ -146,7 +146,8 @@ namespace BTLWebVanChuyen.Controllers
                     OrderStatus.AssignedDeliveryShipper,
                     OrderStatus.Delivering,
                     OrderStatus.Delivered,
-                    OrderStatus.DeliveryFailed
+                    OrderStatus.DeliveryFailed,
+                    OrderStatus.ReadyToReturn
                 };
 
                 query = query.Where(o =>
@@ -169,6 +170,7 @@ namespace BTLWebVanChuyen.Controllers
         // ============================
         // Details (Xem chi tiết)
         // ============================
+        [AllowAnonymous]
         public async Task<IActionResult> Details(int id)
         {
             var order = await _context.Orders
@@ -184,57 +186,62 @@ namespace BTLWebVanChuyen.Controllers
 
             if (order == null) return NotFound();
 
-            // Nếu là Dispatcher, kiểm tra quyền xem chi tiết và chuẩn bị dữ liệu
-            if (User.IsInRole("Dispatcher"))
+            if (User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await _userManager.GetUserAsync(User);
-                var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
-
-                if (dispatcher != null)
+                // Nếu là Dispatcher, kiểm tra quyền xem chi tiết và chuẩn bị dữ liệu
+                if (User.IsInRole("Dispatcher"))
                 {
-                    // === KIỂM TRA BẢO MẬT ===
-                    var pickupPhaseStatuses = new[] {
+                    var user = await _userManager.GetUserAsync(User);
+                    var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
+
+                    if (dispatcher != null)
+                    {
+                        // === KIỂM TRA BẢO MẬT ===
+                        var pickupPhaseStatuses = new[] {
                         OrderStatus.Pending, OrderStatus.AssignedPickupShipper, OrderStatus.Picking,
                         OrderStatus.PickupSuccess, OrderStatus.PickupFailed, OrderStatus.Cancelled,
                         OrderStatus.Returning, OrderStatus.ArrivedPickupTerminal,
                         OrderStatus.AssignedReturnShipper, OrderStatus.ReturningToSender,
                         OrderStatus.Returned, OrderStatus.ReturnFailed
                     };
-                    var deliveryPhaseStatuses = new[] {
+                        var deliveryPhaseStatuses = new[] {
                         OrderStatus.InterAreaTransporting, OrderStatus.ArrivedDeliveryHub,
                         OrderStatus.AssignedDeliveryShipper, OrderStatus.Delivering,
-                        OrderStatus.Delivered, OrderStatus.DeliveryFailed
+                        OrderStatus.Delivered, OrderStatus.DeliveryFailed,
+                        OrderStatus.ReadyToReturn
                     };
 
-                    bool isAuthorized = false;
-                    if (order.PickupAreaId == dispatcher.AreaId && pickupPhaseStatuses.Contains(order.Status)) isAuthorized = true;
-                    if (order.DeliveryAreaId == dispatcher.AreaId && deliveryPhaseStatuses.Contains(order.Status)) isAuthorized = true;
+                        bool isAuthorized = false;
+                        if (order.PickupAreaId == dispatcher.AreaId && pickupPhaseStatuses.Contains(order.Status)) isAuthorized = true;
+                        if (order.DeliveryAreaId == dispatcher.AreaId && deliveryPhaseStatuses.Contains(order.Status)) isAuthorized = true;
 
-                    if (!isAuthorized)
-                    {
-                        return View("Error", new ErrorViewModel { RequestId = "AccessDenied - Bạn không có quyền xem đơn hàng này tại thời điểm hiện tại." });
-                    }
+                        if (!isAuthorized)
+                        {
+                            return View("Error", new ErrorViewModel { RequestId = "AccessDenied - Bạn không có quyền xem đơn hàng này tại thời điểm hiện tại." });
+                        }
 
-                    // --- Chuẩn bị dữ liệu View ---
-                    ViewBag.CurrentDispatcherAreaId = dispatcher.AreaId;
+                        // --- Chuẩn bị dữ liệu View ---
+                        ViewBag.CurrentDispatcherAreaId = dispatcher.AreaId;
 
-                    ViewBag.Shippers = await _context.Employees
-                        .Where(e => e.Role == EmployeeRole.Shipper && e.AreaId == dispatcher.AreaId)
-                        .Include(e => e.User)
-                        .ToListAsync();
-
-                    ViewBag.Warehouses = await _context.Warehouses
-                        .Where(w => w.AreaId == dispatcher.AreaId)
-                        .ToListAsync();
-
-                    if (order.PickupAreaId == dispatcher.AreaId && order.PickupAreaId != order.DeliveryAreaId)
-                    {
-                        ViewBag.DeliveryWarehouses = await _context.Warehouses
-                            .Where(w => w.AreaId == order.DeliveryAreaId)
+                        ViewBag.Shippers = await _context.Employees
+                            .Where(e => e.Role == EmployeeRole.Shipper && e.AreaId == dispatcher.AreaId)
+                            .Include(e => e.User)
                             .ToListAsync();
+
+                        ViewBag.Warehouses = await _context.Warehouses
+                            .Where(w => w.AreaId == dispatcher.AreaId)
+                            .ToListAsync();
+
+                        if (order.PickupAreaId == dispatcher.AreaId && order.PickupAreaId != order.DeliveryAreaId)
+                        {
+                            ViewBag.DeliveryWarehouses = await _context.Warehouses
+                                .Where(w => w.AreaId == order.DeliveryAreaId)
+                                .ToListAsync();
+                        }
                     }
                 }
             }
+
             return View(order);
         }
 
@@ -447,14 +454,41 @@ namespace BTLWebVanChuyen.Controllers
             // --- B. LOGIC CỦA DISPATCHER ---
             else if (User.IsInRole("Dispatcher"))
             {
-                if (order.Status == OrderStatus.PickupSuccess && !isSameArea && status == OrderStatus.InterAreaTransporting) isValidTransition = true;
-                else if (order.Status == OrderStatus.InterAreaTransporting && status == OrderStatus.ArrivedDeliveryHub)
+                // 1. Hủy đơn (Luôn cho phép)
+                if (status == OrderStatus.Cancelled)
                 {
-                    order.ShipperId = null;
                     isValidTransition = true;
                 }
-                else if (status == OrderStatus.Cancelled || status == OrderStatus.Returning) isValidTransition = true;
-                else if (order.Status == OrderStatus.Returning && status == OrderStatus.ArrivedPickupTerminal) isValidTransition = true;
+
+                // 2. Chuyển sang trạng thái "Chờ hoàn trả" (ReadyToReturn)
+                // Áp dụng khi đơn hàng giao thất bại (DeliveryFailed) và cần trả về kho gốc
+                else if (status == OrderStatus.ReadyToReturn)
+                {
+                    // Chỉ cho phép chuyển từ DeliveryFailed
+                    if (order.Status == OrderStatus.DeliveryFailed)
+                    {
+                        // [QUAN TRỌNG] Làm sạch đơn hàng để sẵn sàng gom vào Lô mới
+                        order.ShipperId = null;       // Gỡ Shipper giao hàng cũ
+                        order.ShipmentBatchId = null; // Gỡ Lô hàng chiều đi cũ
+
+                        isValidTransition = true;
+                    }
+                    else
+                    {
+                        return Json(new { success = false, message = "Chỉ đơn hàng giao thất bại mới được chuyển hoàn trả." });
+                    }
+                }
+
+                // 3. CHẶN CÁC TRƯỜNG HỢP KHÁC
+                // Các trạng thái sau đây sẽ do Module Lô Hàng (ShipmentBatch) tự động cập nhật:
+                // - InterAreaTransporting (Đang đi)
+                // - ArrivedDeliveryHub (Đến kho giao)
+                // - Returning (Đang về - Xe chạy)
+                // - ArrivedPickupTerminal (Về đến kho gốc - Xe đến)
+                else
+                {
+                    return Json(new { success = false, message = "Hành động này được thực hiện tự động theo quy trình Lô hàng (Xuất/Nhập bến)." });
+                }
             }
 
             if (!isValidTransition) return Json(new { success = false, message = "Chuyển đổi trạng thái không hợp lệ hoặc thiếu điều kiện." });
@@ -553,15 +587,43 @@ namespace BTLWebVanChuyen.Controllers
                 }
             };
 
+            // === CÁC HỆ SỐ ĐIỀU CHỈNH ĐỂ ĐẠT MỤC TIÊU PHÍ ===
+            const decimal LOCAL_DISTANCE_FACTOR = 0.25m;
+            const decimal LOCAL_WEIGHT_FACTOR = 0.50m;
+            const decimal DISCOUNT_RATE = 0.10m; // 10% chiết khấu cho vận chuyển liên tỉnh
+
+            bool isInterArea = order.PickupAreaId != order.DeliveryAreaId;
+
             var pickupPrice = await _context.PriceTables.FirstOrDefaultAsync(p => p.AreaId == order.PickupAreaId);
             var deliveryPrice = await _context.PriceTables.FirstOrDefaultAsync(p => p.AreaId == order.DeliveryAreaId);
             decimal totalPrice = 0;
+
             if (pickupPrice != null && deliveryPrice != null)
             {
-                totalPrice = pickupPrice.BasePrice + deliveryPrice.BasePrice
-                            + order.DistanceKm * (pickupPrice.PricePerKm + deliveryPrice.PricePerKm)
-                            + order.WeightKg * (pickupPrice.WeightPrice + deliveryPrice.WeightPrice);
+                // 1. Tính tổng chi phí Gốc (Coefficient = 1)
+                decimal baseCost = pickupPrice.BasePrice + deliveryPrice.BasePrice;
+                decimal distCost = order.DistanceKm * (pickupPrice.PricePerKm + deliveryPrice.PricePerKm);
+                decimal weightCost = order.WeightKg * (pickupPrice.WeightPrice + deliveryPrice.WeightPrice);
+
+                // 2. Áp dụng Hệ số Điều chỉnh (Chỉ áp dụng khi nội tỉnh)
+                if (!isInterArea) // Local Area
+                {
+                    distCost *= LOCAL_DISTANCE_FACTOR;
+                    weightCost *= LOCAL_WEIGHT_FACTOR;
+                }
+
+                totalPrice = baseCost + distCost + weightCost;
+
+                // 3. Áp dụng Chiết khấu Gom Đơn (Chỉ áp dụng khi liên tỉnh)
+                if (isInterArea)
+                {
+                    totalPrice = totalPrice * (1.00m - DISCOUNT_RATE);
+                }
+
+                // 4. Làm tròn lên nghìn đồng gần nhất
+                totalPrice = Math.Ceiling(totalPrice / 1000m) * 1000m;
             }
+
             order.TotalPrice = totalPrice;
 
             order.Payer = vm.Payer;
@@ -594,13 +656,26 @@ namespace BTLWebVanChuyen.Controllers
         public async Task<IActionResult> MyOrders()
         {
             var user = await _userManager.GetUserAsync(User);
-            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user!.Id);
-            var orders = await _context.Orders.Where(o => o.CustomerId == customer!.Id)
+            if (user == null) return RedirectToAction("Login", "Auth");
+
+            // Tìm thông tin khách hàng khớp với User đang đăng nhập
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == user.Id);
+
+            // === [FIX LỖI] Kiểm tra nếu chưa có dữ liệu Khách hàng ===
+            if (customer == null)
+            {
+                // Trường hợp này xảy ra nếu User được tạo thủ công hoặc lỗi khi đăng ký
+                // Trả về danh sách rỗng để không bị lỗi trang
+                return View(new List<Order>());
+            }
+
+            var orders = await _context.Orders.Where(o => o.CustomerId == customer.Id)
                 .Include(o => o.PickupArea).Include(o => o.DeliveryArea)
                 .Include(o => o.Dispatcher).ThenInclude(d => d!.User)
                 .Include(o => o.Shipper).ThenInclude(s => s!.User)
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
+
             return View(orders);
         }
 
@@ -980,53 +1055,53 @@ namespace BTLWebVanChuyen.Controllers
             return Json(new { success = true });
         }
 
-        // ============================
-        // StartTransfer
-        // ============================
-        [HttpPost, Authorize(Roles = "Dispatcher"), ValidateAntiForgeryToken]
-        public async Task<IActionResult> StartTransfer(int orderId, int deliveryWarehouseId)
-        {
-            var order = await _context.Orders.FindAsync(orderId);
-            var user = await _userManager.GetUserAsync(User);
-            var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
+        //// ============================
+        //// StartTransfer
+        //// ============================
+        //[HttpPost, Authorize(Roles = "Dispatcher"), ValidateAntiForgeryToken]
+        //public async Task<IActionResult> StartTransfer(int orderId, int deliveryWarehouseId)
+        //{
+        //    var order = await _context.Orders.FindAsync(orderId);
+        //    var user = await _userManager.GetUserAsync(User);
+        //    var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
 
-            if (order == null || dispatcher == null) return Json(new { success = false, message = "Lỗi dữ liệu." });
+        //    if (order == null || dispatcher == null) return Json(new { success = false, message = "Lỗi dữ liệu." });
 
-            if (dispatcher.AreaId != order.PickupAreaId) return Json(new { success = false, message = "Bạn không có quyền thực hiện chuyển hàng đi." });
+        //    if (dispatcher.AreaId != order.PickupAreaId) return Json(new { success = false, message = "Bạn không có quyền thực hiện chuyển hàng đi." });
 
-            if (order.Status != OrderStatus.PickupSuccess) return Json(new { success = false, message = "Trạng thái đơn hàng không hợp lệ." });
+        //    if (order.Status != OrderStatus.PickupSuccess) return Json(new { success = false, message = "Trạng thái đơn hàng không hợp lệ." });
 
-            order.Status = OrderStatus.InterAreaTransporting;
-            order.DeliveryWarehouseId = deliveryWarehouseId;
+        //    order.Status = OrderStatus.InterAreaTransporting;
+        //    order.DeliveryWarehouseId = deliveryWarehouseId;
 
-            if (order.OrderLogs == null) order.OrderLogs = new List<OrderLog>();
-            order.OrderLogs.Add(new OrderLog
-            {
-                OrderId = order.Id,
-                Status = OrderStatus.InterAreaTransporting,
-                Time = DateTime.Now,
-                Note = $"Bắt đầu chuyển đến kho đích (ID: {deliveryWarehouseId})",
-                UpdatedBy = user!.UserName
-            });
+        //    if (order.OrderLogs == null) order.OrderLogs = new List<OrderLog>();
+        //    order.OrderLogs.Add(new OrderLog
+        //    {
+        //        OrderId = order.Id,
+        //        Status = OrderStatus.InterAreaTransporting,
+        //        Time = DateTime.Now,
+        //        Note = $"Bắt đầu chuyển đến kho đích (ID: {deliveryWarehouseId})",
+        //        UpdatedBy = user!.UserName
+        //    });
 
-            await _context.SaveChangesAsync();
+        //    await _context.SaveChangesAsync();
 
-            var whName = await _context.Warehouses.Where(w => w.Id == deliveryWarehouseId).Select(w => w.Name).FirstOrDefaultAsync();
+        //    var whName = await _context.Warehouses.Where(w => w.Id == deliveryWarehouseId).Select(w => w.Name).FirstOrDefaultAsync();
 
-            var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
-            if (!string.IsNullOrWhiteSpace(customerUserId))
-            {
-                await CreateNotificationAsync(customerUserId, $"Đơn {order.TrackingCode} đã bắt đầu vận chuyển đến kho {whName} (khu vực giao).", order.Id);
-            }
+        //    var customerUserId = await GetCustomerUserIdAsync(order.CustomerId);
+        //    if (!string.IsNullOrWhiteSpace(customerUserId))
+        //    {
+        //        await CreateNotificationAsync(customerUserId, $"Đơn {order.TrackingCode} đã bắt đầu vận chuyển đến kho {whName} (khu vực giao).", order.Id);
+        //    }
 
-            var deliveryDispatcherUserIds = await GetDispatchersByAreaAsync(order.DeliveryAreaId);
-            if (deliveryDispatcherUserIds.Any())
-            {
-                await CreateNotificationsAsync(deliveryDispatcherUserIds, $"Đơn {order.TrackingCode} đang được vận chuyển đến kho {whName} (khu vực của bạn).", order.Id);
-            }
+        //    var deliveryDispatcherUserIds = await GetDispatchersByAreaAsync(order.DeliveryAreaId);
+        //    if (deliveryDispatcherUserIds.Any())
+        //    {
+        //        await CreateNotificationsAsync(deliveryDispatcherUserIds, $"Đơn {order.TrackingCode} đang được vận chuyển đến kho {whName} (khu vực của bạn).", order.Id);
+        //    }
 
-            return Json(new { success = true, message = $"Đã bắt đầu vận chuyển đến {whName}" });
-        }
+        //    return Json(new { success = true, message = $"Đã bắt đầu vận chuyển đến {whName}" });
+        //}
 
         // ============================
         // CUSTOMER: Tạo lại đơn hàng (Re-order)

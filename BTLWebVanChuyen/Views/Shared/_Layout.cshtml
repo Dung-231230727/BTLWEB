@@ -125,6 +125,9 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-controller="Order" asp-action="Index">Quản lý Đơn</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="ShipmentBatch" asp-action="Index">Quản lý lô</a>
+                            </li>
 
                             @if (User.IsInRole("Admin"))
                             {
@@ -192,12 +195,15 @@
                                         <form asp-action="Logout" asp-controller="Auth" method="post">
                                             <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-power-off me-2"></i> Đăng xuất</button>
                                         </form>
-                                        <form asp-action="" asp-controller="" method="post">
-                                            <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-user me-2"></i> Tài khoản</button>
-                                        </form>
-                                        <form asp-action="Index" asp-controller="Wallet">
-                                            <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-user me-2"></i> Ví tiền</button>
-                                        </form>
+                                        @if (User.IsInRole("Customer"))
+                                        {
+                                            <a class="dropdown-item text-dark" asp-controller="Customer" asp-action="Info">
+                                                <i class="fa-solid fa-user me-2"></i> Tài khoản
+                                            </a>
+                                        }
+                                        <a class="dropdown-item text-dark" asp-controller="Wallet" asp-action="Index">
+                                            <i class="fa-solid fa-wallet me-2 text-warning"></i> Ví tiền
+                                        </a>
                                     </li>
                                 </ul>
                             </div>

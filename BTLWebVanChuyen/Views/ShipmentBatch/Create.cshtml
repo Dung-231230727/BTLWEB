@@ -1,0 +1,208 @@
+﻿@model List<BTLWebVanChuyen.Models.Order>
+@using BTLWebVanChuyen.Models
+
+@{
+    ViewData["Title"] = ViewBag.IsAdding != null ? "Thêm đơn vào Lô " + ViewBag.BatchCode : "Tạo Lô Hàng Mới";
+    var destWarehouses = ViewBag.DestWarehouses as List<Warehouse> ?? new List<Warehouse>();
+    var shippers = ViewBag.Shippers as List<Employee> ?? new List<Employee>();
+
+    var groupedOrders = Model.GroupBy(o =>
+        o.Status == OrderStatus.ReadyToReturn ? o.PickupArea.AreaName : o.DeliveryArea.AreaName
+    );
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center mb-4">
+            <div class="bg-primary text-white rounded-circle p-3 me-3 shadow-sm d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                <i class="fa-solid fa-box-open fa-lg"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold text-dark mb-0">@ViewData["Title"]</h4>
+                <p class="text-muted mb-0 small">
+                    @if (ViewBag.IsAdding != null)
+                    {
+                        <span>Đích đến: @ViewBag.BatchDestination</span>
+                        ;
+                    }
+                    else
+                    {
+
+                        <span>Chọn các đơn hàng cùng tuyến để đóng gói.</span>
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        @if (!Model.Any())
+        {
+            <div class="alert alert-info border-0 shadow-sm rounded-4 p-4 text-center">
+                <i class="fa-solid fa-circle-info fa-3x mb-3 text-info"></i>
+                <h5 class="fw-bold">Không có đơn hàng nào</h5>
+                <p class="mb-0">Hiện tại kho không có đơn hàng nào đang chờ vận chuyển đi tỉnh khác.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var group in groupedOrders)
+            {
+                <div class="card mb-4 shadow-sm border-0 rounded-4 overflow-hidden">
+                    <div class="card-header bg-light py-3 px-4 d-flex align-items-center justify-content-between">
+                        <div class="form-check">
+                            <input class="form-check-input select-group me-2" type="checkbox" data-group="@group.Key" id="grp_@group.Key" style="width: 1.2em; height: 1.2em;">
+                            <label class="form-check-label fw-bold text-uppercase text-dark cursor-pointer" for="grp_@group.Key">
+                                Xe đi đến: <span class="text-danger">@group.Key</span>
+                            </label>
+                        </div>
+                        <span class="badge bg-primary rounded-pill px-3 py-2">@group.Count() đơn</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle">
+                                <tbody>
+                                    @foreach (var order in group)
+                                    {
+                                        // [FIX LỖI 2]: Kiểm tra trạng thái ReadyToReturn để xác định chiều về
+                                        bool isReturn = order.Status == OrderStatus.ReadyToReturn;
+
+                                        <tr class="@(isReturn ? "table-warning bg-opacity-10" : "")">
+                                            <td class="ps-4 py-3" style="width: 50px;">
+                                                <input type="checkbox" class="form-check-input order-check" data-group="@group.Key" value="@order.Id" style="width: 1.1em; height: 1.1em;" />
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-primary">@order.TrackingCode</div>
+                                                @if (isReturn)
+                                                {
+                                                    <span class="badge bg-danger text-white" style="font-size: 0.65rem">HOÀN TRẢ</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-success text-white" style="font-size: 0.65rem">GIAO ĐI</span>
+                                                }
+                                                <div class="small text-muted mt-1"><i class="fa-regular fa-clock me-1"></i>@order.CreatedAt.ToString("dd/MM HH:mm")</div>
+                                            </td>
+                                            <td>
+                                                <div class="small text-muted text-uppercase">Lộ trình</div>
+                                                <div class="fw-bold text-dark" style="font-size: 0.9rem">
+                                                    @if (isReturn)
+                                                    {
+                                                        @* CHIỀU HOÀN TRẢ: Giao cũ -> Lấy cũ *@
+                                                        <span>@order.DeliveryArea.AreaName <i class="fa-solid fa-arrow-right text-muted mx-1"></i> @order.PickupArea.AreaName</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        @* CHIỀU GIAO ĐI: Lấy cũ -> Giao cũ *@
+                                                        <span>@order.PickupArea.AreaName <i class="fa-solid fa-arrow-right text-muted mx-1"></i> @order.DeliveryArea.AreaName</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td class="text-end pe-4 fw-bold text-success">
+                                                @order.WeightKg kg
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow border-0 sticky-top rounded-4 overflow-hidden" style="top: 100px;">
+            <div class="card-header bg-primary text-white py-3 text-center">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-truck-ramp-box me-2"></i>Thông tin Lô hàng</h5>
+            </div>
+            <div class="card-body p-4">
+                <form id="createBatchForm" data-mode="@(ViewBag.IsAdding != null ? "add" : "create")">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="batchId" value="@(ViewBag.BatchId ?? 0)" /> @* Thêm Batch ID *@
+
+                    @if (ViewBag.IsAdding == null)
+                    {
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small text-uppercase">Kho Đích (Nhận hàng)</label>
+                            <select id="destWarehouse" name="destinationWarehouseId" class="form-select form-select-lg bg-light border-0" required>
+                                <option value="">-- Chọn kho nhận --</option>
+                                @foreach (var w in destWarehouses)
+                                {
+                                    <option value="@w.Id">@w.Name (@w.Area!.AreaName)</option>
+                                }
+                            </select>
+                        </div>
+                    }
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary small text-uppercase">Tài xế / Xe tải (Tùy chọn)</label>
+                        <select id="shipperId" name="shipperId" class="form-select bg-light border-0" style="height: 45px;">
+                            <option value="">-- Không chỉ định --</option>
+                            @foreach (var s in shippers)
+                            {
+                                <option value="@s.Id">@s.User?.FullName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded-3 border border-light">
+                        <span class="text-secondary fw-bold">Đã chọn:</span>
+                        <span class="h3 fw-bold text-primary mb-0" id="selected-count">0</span>
+                    </div>
+
+                    <button type="button" onclick="submitBatch()" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-sm hover-top transition-hover">
+                        <i class="fa-solid fa-check-circle me-2"></i>@(ViewBag.IsAdding != null ? "THÊM VÀO LÔ" : "XÁC NHẬN TẠO LÔ")
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // (Script giữ nguyên như cũ)
+        $('.select-group').change(function () {
+            var grp = $(this).data('group');
+            $(`.order-check[data-group='${grp}']`).prop('checked', $(this).is(':checked'));
+            updateCount();
+        });
+        $('.order-check').change(updateCount);
+        function updateCount() { $('#selected-count').text($('.order-check:checked').length); }
+
+        function submitBatch() {
+            var ids = $('.order-check:checked').map(function () { return $(this).val(); }).get();
+            var mode = $('#createBatchForm').data('mode');
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            var url = '';
+            var data = { orderIds: ids, __RequestVerificationToken: token };
+
+            if (mode === 'create') {
+                url = '@Url.Action("Create")';
+                data.destinationWarehouseId = $('#destWarehouse').val();
+                data.shipperId = $('#shipperId').val();
+                if (!data.destinationWarehouseId) { alert("Vui lòng chọn Kho Đích đến!"); return; }
+            } else { // mode === 'add'
+                url = '@Url.Action("AddOrdersToBatch")';
+                data.batchId = $('#batchId').val();
+            }
+
+            if (ids.length === 0) { alert("Vui lòng chọn ít nhất một đơn hàng!"); return; }
+            if (!confirm(`Xác nhận thao tác với ${ids.length} đơn hàng?`)) return;
+
+            $.post(url, data)
+            .done(function (res) {
+                if (res.success) {
+                    alert(res.message);
+                    // Chuyển hướng về trang chi tiết lô nếu là Add, hoặc Index nếu là Create
+                    window.location.href = '@Url.Action("Index", "ShipmentBatch")' + (mode === 'add' ? '/Details/' + data.batchId : '');
+                } else {
+                    alert("Lỗi: " + res.message);
+                }
+            }).fail(function () { alert("Lỗi kết nối server."); });
+        }
+    </script>
+}
