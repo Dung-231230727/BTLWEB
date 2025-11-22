@@ -303,6 +303,66 @@ namespace BTLWebVanChuyen.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ShipmentBatches",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    BatchCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    OriginWarehouseId = table.Column<int>(type: "int", nullable: false),
+                    DestinationWarehouseId = table.Column<int>(type: "int", nullable: false),
+                    ShipperId = table.Column<int>(type: "int", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ShipmentBatches", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ShipmentBatches_Employees_ShipperId",
+                        column: x => x.ShipperId,
+                        principalTable: "Employees",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ShipmentBatches_Warehouses_DestinationWarehouseId",
+                        column: x => x.DestinationWarehouseId,
+                        principalTable: "Warehouses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ShipmentBatches_Warehouses_OriginWarehouseId",
+                        column: x => x.OriginWarehouseId,
+                        principalTable: "Warehouses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "WalletTransactions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    WalletId = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RelatedOrderId = table.Column<int>(type: "int", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_WalletTransactions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_WalletTransactions_Wallets_WalletId",
+                        column: x => x.WalletId,
+                        principalTable: "Wallets",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Orders",
                 columns: table => new
                 {
@@ -329,7 +389,8 @@ namespace BTLWebVanChuyen.Migrations
                     DeliveryWarehouseId = table.Column<int>(type: "int", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    FailureReason = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    FailureReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ShipmentBatchId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -365,6 +426,12 @@ namespace BTLWebVanChuyen.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
+                        name: "FK_Orders_ShipmentBatches_ShipmentBatchId",
+                        column: x => x.ShipmentBatchId,
+                        principalTable: "ShipmentBatches",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
                         name: "FK_Orders_Warehouses_DeliveryWarehouseId",
                         column: x => x.DeliveryWarehouseId,
                         principalTable: "Warehouses",
@@ -377,25 +444,24 @@ namespace BTLWebVanChuyen.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "WalletTransactions",
+                name: "ShipmentBatchLogs",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    WalletId = table.Column<int>(type: "int", nullable: false),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Type = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    RelatedOrderId = table.Column<int>(type: "int", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    ShipmentBatchId = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Time = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Note = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_WalletTransactions", x => x.Id);
+                    table.PrimaryKey("PK_ShipmentBatchLogs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_WalletTransactions_Wallets_WalletId",
-                        column: x => x.WalletId,
-                        principalTable: "Wallets",
+                        name: "FK_ShipmentBatchLogs_ShipmentBatches_ShipmentBatchId",
+                        column: x => x.ShipmentBatchId,
+                        principalTable: "ShipmentBatches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -554,6 +620,11 @@ namespace BTLWebVanChuyen.Migrations
                 column: "PickupWarehouseId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Orders_ShipmentBatchId",
+                table: "Orders",
+                column: "ShipmentBatchId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Orders_ShipperId",
                 table: "Orders",
                 column: "ShipperId");
@@ -562,6 +633,26 @@ namespace BTLWebVanChuyen.Migrations
                 name: "IX_PriceTables_AreaId",
                 table: "PriceTables",
                 column: "AreaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ShipmentBatches_DestinationWarehouseId",
+                table: "ShipmentBatches",
+                column: "DestinationWarehouseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ShipmentBatches_OriginWarehouseId",
+                table: "ShipmentBatches",
+                column: "OriginWarehouseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ShipmentBatches_ShipperId",
+                table: "ShipmentBatches",
+                column: "ShipperId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ShipmentBatchLogs_ShipmentBatchId",
+                table: "ShipmentBatchLogs",
+                column: "ShipmentBatchId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Wallets_UserId",
@@ -611,6 +702,9 @@ namespace BTLWebVanChuyen.Migrations
                 name: "Reports");
 
             migrationBuilder.DropTable(
+                name: "ShipmentBatchLogs");
+
+            migrationBuilder.DropTable(
                 name: "WalletTransactions");
 
             migrationBuilder.DropTable(
@@ -624,6 +718,9 @@ namespace BTLWebVanChuyen.Migrations
 
             migrationBuilder.DropTable(
                 name: "Customers");
+
+            migrationBuilder.DropTable(
+                name: "ShipmentBatches");
 
             migrationBuilder.DropTable(
                 name: "Employees");

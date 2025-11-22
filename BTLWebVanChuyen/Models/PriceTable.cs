@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace BTLWebVanChuyen.Models
 {
@@ -7,7 +8,9 @@ namespace BTLWebVanChuyen.Models
         public int Id { get; set; }
 
         public int AreaId { get; set; }
-        public Area Area { get; set; } = null!;
+
+        [ValidateNever]
+        public Area? Area { get; set; }
 
         [Column(TypeName = "decimal(18, 2)")]
         public decimal BasePrice { get; set; }
