@@ -4,13 +4,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using System.Linq;
-using System;
 
 namespace BTLWebVanChuyen.Controllers
 {
-    // 1. SỬA: Đổi thành Authorize chung để cả Admin và Khách đều vào được class này
+    // 1. Authorize chung cho cả Admin và Customer (để vào được Info)
     [Authorize]
     public class CustomerController : Controller
     {
@@ -27,7 +24,7 @@ namespace BTLWebVanChuyen.Controllers
         // PHẦN 1: DÀNH CHO ADMIN (QUẢN LÝ DANH SÁCH)
         // ============================================================
 
-        // INDEX: Chỉ Admin được xem
+        // INDEX: Chỉ Admin được xem danh sách
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Index(string searchString)
         {
@@ -35,7 +32,7 @@ namespace BTLWebVanChuyen.Controllers
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                query = query.Where(c => c.User!.FullName.Contains(searchString) || c.User.Email.Contains(searchString));
+                query = query.Where(c => c.User!.FullName.Contains(searchString) || c.User.Email!.Contains(searchString));
             }
 
             ViewData["CurrentFilter"] = searchString;
@@ -80,7 +77,7 @@ namespace BTLWebVanChuyen.Controllers
 
             var customerName = customer.User?.FullName ?? "Khách hàng";
             var customerUserId = customer.UserId;
-            
+
             // Thông báo cho customer trước khi xóa
             _context.Notifications.Add(new Notification
             {
@@ -89,7 +86,7 @@ namespace BTLWebVanChuyen.Controllers
                 CreatedAt = DateTime.Now,
                 IsRead = false
             });
-            
+
             // Thông báo cho admin
             var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
             foreach (var admin in adminUsers)
@@ -102,7 +99,7 @@ namespace BTLWebVanChuyen.Controllers
                     IsRead = false
                 });
             }
-            
+
             await _context.SaveChangesAsync();
 
             var user = await _userManager.FindByIdAsync(customer.UserId);
@@ -134,7 +131,7 @@ namespace BTLWebVanChuyen.Controllers
             // Gán user vào customer để View hiển thị
             customerInDb.User = userInDb;
 
-            // LƯU Ý: Không gán TempData["Success"] ở đây để tránh hiện alert khi vừa vào trang
+            // QUAN TRỌNG: Không gán TempData["Success"] ở đây
             return View(customerInDb);
         }
 
@@ -144,7 +141,7 @@ namespace BTLWebVanChuyen.Controllers
         public async Task<IActionResult> Info(Customer model, string? currentPassword, string? newPassword, string? confirmPassword)
         {
             var userId = _userManager.GetUserId(User);
-            var userInDb = await _userManager.FindByIdAsync(userId);
+            var userInDb = await _userManager.FindByIdAsync(userId!);
             var customerInDb = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == userId);
 
             if (userInDb == null || customerInDb == null) return NotFound();
@@ -174,7 +171,7 @@ namespace BTLWebVanChuyen.Controllers
                 // Logic check trùng Email (nếu có thay đổi)
                 if (!string.Equals(userInDb.Email, model.User.Email, StringComparison.OrdinalIgnoreCase))
                 {
-                    var emailExists = await _userManager.FindByEmailAsync(model.User.Email);
+                    var emailExists = await _userManager.FindByEmailAsync(model.User.Email!);
                     if (emailExists != null && emailExists.Id != userId)
                     {
                         TempData["Error"] = "Email này đã được sử dụng bởi tài khoản khác.";
@@ -200,8 +197,8 @@ namespace BTLWebVanChuyen.Controllers
 
             // 3. Xử lý Đổi Mật Khẩu (Chỉ chạy khi người dùng nhập dữ liệu vào ô mật khẩu)
             bool wantsToChangePassword = !string.IsNullOrEmpty(currentPassword)
-                             || !string.IsNullOrEmpty(newPassword)
-                             || !string.IsNullOrEmpty(confirmPassword);
+                                      || !string.IsNullOrEmpty(newPassword)
+                                      || !string.IsNullOrEmpty(confirmPassword);
 
             if (wantsToChangePassword && !hasError)
             {
@@ -238,6 +235,7 @@ namespace BTLWebVanChuyen.Controllers
             {
                 await _context.SaveChangesAsync();
 
+                // CHỈ GÁN THÔNG BÁO THÀNH CÔNG TẠI ĐÂY
                 TempData["Success"] = "Cập nhật thông tin thành công!";
 
                 // QUAN TRỌNG: Redirect về trang Info (GET) để xóa TempData sau khi hiện Alert

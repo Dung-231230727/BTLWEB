@@ -23,6 +23,8 @@ namespace BTLWebVanChuyen.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
+        public DbSet<ShipmentBatch> ShipmentBatches { get; set; }
+        public DbSet<ShipmentBatchLog> ShipmentBatchLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -110,6 +112,33 @@ namespace BTLWebVanChuyen.Data
                 .WithOne(w => w.User)
                 .HasForeignKey<Wallet>(w => w.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Config Lô hàng
+            builder.Entity<ShipmentBatch>()
+                .HasOne(b => b.OriginWarehouse)
+                .WithMany()
+                .HasForeignKey(b => b.OriginWarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ShipmentBatch>()
+                .HasOne(b => b.DestinationWarehouse)
+                .WithMany()
+                .HasForeignKey(b => b.DestinationWarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Order>()
+                .HasOne(o => o.ShipmentBatch)
+                .WithMany(b => b.Orders)
+                .HasForeignKey(o => o.ShipmentBatchId)
+                .OnDelete(DeleteBehavior.SetNull); // Xóa lô thì đơn không mất, chỉ rời khỏi lô
+
+            // Config BatchLog
+            builder.Entity<ShipmentBatchLog>()
+                .HasOne(l => l.ShipmentBatch)
+                .WithMany(b => b.BatchLogs)
+                .HasForeignKey(l => l.ShipmentBatchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
         }
     }
 }

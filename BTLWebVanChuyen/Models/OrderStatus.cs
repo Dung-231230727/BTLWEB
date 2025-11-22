@@ -64,6 +64,10 @@ namespace BTLWebVanChuyen.Models
         AssignedReturnShipper = 17,
 
         [Display(Name = "Đang hoàn trả về người gửi")]
-        ReturningToSender = 18
+        ReturningToSender = 18,
+
+        // [MỚI] Trạng thái chờ gom lô hoàn trả
+        [Display(Name = "Chờ hoàn trả")]
+        ReadyToReturn = 19
     }
 }

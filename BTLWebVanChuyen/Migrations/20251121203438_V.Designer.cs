@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BTLWebVanChuyen.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251121164029_v")]
-    partial class v
+    [Migration("20251121203438_V")]
+    partial class V
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -284,6 +284,9 @@ namespace BTLWebVanChuyen.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("ShipmentBatchId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("ShipperId")
                         .HasColumnType("int");
 
@@ -313,6 +316,8 @@ namespace BTLWebVanChuyen.Migrations
                     b.HasIndex("PickupAreaId");
 
                     b.HasIndex("PickupWarehouseId");
+
+                    b.HasIndex("ShipmentBatchId");
 
                     b.HasIndex("ShipperId");
 
@@ -402,6 +407,106 @@ namespace BTLWebVanChuyen.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Reports");
+                });
+
+            modelBuilder.Entity("BTLWebVanChuyen.Models.ShipmentBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BatchCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DestinationWarehouseId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OriginWarehouseId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ShipperId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DestinationWarehouseId");
+
+                    b.HasIndex("OriginWarehouseId");
+
+                    b.HasIndex("ShipperId");
+
+                    b.ToTable("ShipmentBatches");
+                });
+
+            modelBuilder.Entity("BTLWebVanChuyen.Models.Wallet", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Wallets");
+                });
+
+            modelBuilder.Entity("BTLWebVanChuyen.Models.WalletTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RelatedOrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("WalletId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("WalletTransactions");
                 });
 
             modelBuilder.Entity("BTLWebVanChuyen.Models.Warehouse", b =>
@@ -642,6 +747,11 @@ namespace BTLWebVanChuyen.Migrations
                         .WithMany()
                         .HasForeignKey("PickupWarehouseId");
 
+                    b.HasOne("BTLWebVanChuyen.Models.ShipmentBatch", "ShipmentBatch")
+                        .WithMany("Orders")
+                        .HasForeignKey("ShipmentBatchId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("BTLWebVanChuyen.Models.Employee", "Shipper")
                         .WithMany("OrdersAsShipper")
                         .HasForeignKey("ShipperId")
@@ -658,6 +768,8 @@ namespace BTLWebVanChuyen.Migrations
                     b.Navigation("PickupArea");
 
                     b.Navigation("PickupWarehouse");
+
+                    b.Navigation("ShipmentBatch");
 
                     b.Navigation("Shipper");
                 });
@@ -682,6 +794,53 @@ namespace BTLWebVanChuyen.Migrations
                         .IsRequired();
 
                     b.Navigation("Area");
+                });
+
+            modelBuilder.Entity("BTLWebVanChuyen.Models.ShipmentBatch", b =>
+                {
+                    b.HasOne("BTLWebVanChuyen.Models.Warehouse", "DestinationWarehouse")
+                        .WithMany()
+                        .HasForeignKey("DestinationWarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BTLWebVanChuyen.Models.Warehouse", "OriginWarehouse")
+                        .WithMany()
+                        .HasForeignKey("OriginWarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BTLWebVanChuyen.Models.Employee", "Shipper")
+                        .WithMany()
+                        .HasForeignKey("ShipperId");
+
+                    b.Navigation("DestinationWarehouse");
+
+                    b.Navigation("OriginWarehouse");
+
+                    b.Navigation("Shipper");
+                });
+
+            modelBuilder.Entity("BTLWebVanChuyen.Models.Wallet", b =>
+                {
+                    b.HasOne("BTLWebVanChuyen.Models.ApplicationUser", "User")
+                        .WithOne()
+                        .HasForeignKey("BTLWebVanChuyen.Models.Wallet", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BTLWebVanChuyen.Models.WalletTransaction", b =>
+                {
+                    b.HasOne("BTLWebVanChuyen.Models.Wallet", "Wallet")
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("BTLWebVanChuyen.Models.Warehouse", b =>
@@ -779,6 +938,11 @@ namespace BTLWebVanChuyen.Migrations
             modelBuilder.Entity("BTLWebVanChuyen.Models.Order", b =>
                 {
                     b.Navigation("OrderLogs");
+                });
+
+            modelBuilder.Entity("BTLWebVanChuyen.Models.ShipmentBatch", b =>
+                {
+                    b.Navigation("Orders");
                 });
 #pragma warning restore 612, 618
         }

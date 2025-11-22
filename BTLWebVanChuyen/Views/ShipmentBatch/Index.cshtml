@@ -1,0 +1,110 @@
+﻿@model IEnumerable<BTLWebVanChuyen.Models.ShipmentBatch>
+@using BTLWebVanChuyen.Models
+
+@{
+    ViewData["Title"] = "Danh sách Lô hàng";
+    int currentAreaId = ViewBag.CurrentAreaId != null ? (int)ViewBag.CurrentAreaId : 0;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <div>
+        <h6 class="text-primary text-uppercase mb-1" style="letter-spacing: 1px;">Quản lý vận chuyển</h6>
+        <h2 class="text-dark fw-bold m-0"><i class="fa-solid fa-truck-fast me-2 text-primary"></i> @ViewData["Title"]</h2>
+    </div>
+
+    <a asp-action="Create" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-top">
+        <i class="fa-solid fa-plus me-2"></i>Tạo Lô Mới
+    </a>
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center">
+        <i class="fa-solid fa-check-circle me-2 fs-5"></i> @TempData["Message"]
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center">
+        <i class="fa-solid fa-triangle-exclamation me-2 fs-5"></i> @TempData["Error"]
+    </div>
+}
+
+<div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="py-4 ps-4 text-secondary text-uppercase font-weight-bold small border-0">Mã Lô</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Hành trình</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Số lượng</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Ngày tạo</th>
+                        <th class="py-4 text-secondary text-uppercase font-weight-bold small border-0">Trạng thái</th>
+                        <th class="py-4 pe-4 border-0 text-end">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="text-center py-5 text-muted">Chưa có lô hàng nào.</td></tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="py-3 ps-4 fw-bold text-primary">@item.BatchCode</td>
+                            <td>
+                                <div class="d-flex align-items-center small">
+                                    <span class="badge bg-white text-dark border shadow-sm me-2 py-2"><i class="fa-solid fa-warehouse me-1 text-secondary"></i> @item.OriginWarehouse?.Name</span>
+                                    <i class="fa-solid fa-arrow-right-long text-primary mx-2"></i>
+                                    <span class="badge bg-white text-dark border shadow-sm py-2"><i class="fa-solid fa-location-dot me-1 text-danger"></i> @item.DestinationWarehouse?.Name</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 border border-info">@item.Orders?.Count() đơn</span>
+                            </td>
+                            <td class="text-muted small">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                @if (item.Status == ShipmentBatchStatus.Created)
+                                {
+                                    <span class="badge bg-warning text-dark rounded-pill px-3">Mới tạo</span>
+                                }
+                                else if (item.Status == ShipmentBatchStatus.InTransit)
+                                {
+                                    <span class="badge bg-primary rounded-pill px-3"><i class="fa-solid fa-truck me-1"></i>Đang chạy</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success rounded-pill px-3">Đã đến nơi</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group">
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm rounded-start fw-bold" title="Xem chi tiết">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
+
+                                    @if (item.Status == ShipmentBatchStatus.Created && item.OriginWarehouse!.AreaId == currentAreaId)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning btn-sm fw-bold" title="Sửa">
+                                            <i class="fa-solid fa-pen-square"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm rounded-end fw-bold" title="Xóa">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        // Nút giả để giữ layout đẹp nếu không có quyền sửa/xóa
+                                        <button class="btn btn-outline-secondary btn-sm rounded-end" disabled><i class="fa-solid fa-lock"></i></button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
