@@ -12,9 +12,12 @@
         <h2 class="text-dark fw-bold m-0"><i class="fa-solid fa-truck-fast me-2 text-primary"></i> @ViewData["Title"]</h2>
     </div>
 
-    <a asp-action="Create" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-top">
-        <i class="fa-solid fa-plus me-2"></i>Tạo Lô Mới
-    </a>
+    @if (User.IsInRole("Dispatcher"))
+    {
+        <a class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-top" asp-action="Create">
+            <i class="fa-solid fa-plus me-2"></i>Tạo lô mới
+        </a>
+    }
 </div>
 
 @if (TempData["Message"] != null)

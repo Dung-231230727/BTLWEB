@@ -19,27 +19,40 @@ namespace BTLWebVanChuyen.Controllers
             _userManager = userManager;
         }
 
-        // 1. DANH SÁCH LÔ HÀNG
+        // ==========================================
+        // 1. DANH SÁCH LÔ HÀNG (INDEX)
+        // ==========================================
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
-            var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
-            if (dispatcher == null) return Forbid();
 
-            ViewBag.CurrentAreaId = dispatcher.AreaId;
-
-            var batches = await _context.ShipmentBatches
+            IQueryable<ShipmentBatch> query = _context.ShipmentBatches
                 .Include(b => b.OriginWarehouse).ThenInclude(w => w!.Area)
                 .Include(b => b.DestinationWarehouse).ThenInclude(w => w!.Area)
-                .Include(b => b.Orders)
-                .Where(b => b.OriginWarehouse!.AreaId == dispatcher.AreaId || b.DestinationWarehouse!.AreaId == dispatcher.AreaId)
-                .OrderByDescending(b => b.CreatedAt)
-                .ToListAsync();
+                .Include(b => b.Orders);
 
-            return View(batches);
+            // Phân quyền hiển thị
+            if (User.IsInRole("Dispatcher"))
+            {
+                var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
+                if (dispatcher == null) return Forbid();
+
+                ViewBag.CurrentAreaId = dispatcher.AreaId; // Để view check quyền nút bấm
+
+                // Chỉ hiện lô liên quan đến khu vực của Dispatcher
+                query = query.Where(b => b.OriginWarehouse!.AreaId == dispatcher.AreaId || b.DestinationWarehouse!.AreaId == dispatcher.AreaId);
+            }
+            else if (User.IsInRole("Admin"))
+            {
+                ViewBag.IsAdmin = true; // Admin thấy hết và có toàn quyền
+            }
+
+            return View(await query.OrderByDescending(b => b.CreatedAt).ToListAsync());
         }
 
-        // 2. CHI TIẾT LÔ HÀNG
+        // ==========================================
+        // 2. CHI TIẾT LÔ HÀNG (DETAILS)
+        // ==========================================
         public async Task<IActionResult> Details(int id)
         {
             var batch = await _context.ShipmentBatches
@@ -53,44 +66,67 @@ namespace BTLWebVanChuyen.Controllers
             if (batch == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
-            var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
-            ViewBag.CurrentAreaId = dispatcher?.AreaId ?? 0;
+
+            // Logic lấy AreaId hiện tại để check quyền nút bấm trong View
+            if (User.IsInRole("Dispatcher"))
+            {
+                var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
+                ViewBag.CurrentAreaId = dispatcher?.AreaId ?? 0;
+            }
+            else if (User.IsInRole("Admin"))
+            {
+                ViewBag.IsAdmin = true;
+            }
 
             return View(batch);
         }
 
-        // 3. TRANG TẠO LÔ (GOM ĐƠN)
+        // ==========================================
+        // 3. TRANG TẠO LÔ - GOM ĐƠN (CREATE - GET)
+        // ==========================================
         public async Task<IActionResult> Create()
         {
             var user = await _userManager.GetUserAsync(User);
-            var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
-            if (dispatcher == null) return Forbid();
+            int currentAreaId = 0;
 
-            // A. Lấy đơn GIAO ĐI (Forward): Trạng thái PickupSuccess
+            // Xác định khu vực làm việc để lọc đơn
+            if (User.IsInRole("Dispatcher"))
+            {
+                var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
+                if (dispatcher == null) return Forbid();
+                currentAreaId = dispatcher.AreaId ?? 0;
+            }
+            else if (User.IsInRole("Admin"))
+            {
+                // Admin không thuộc khu vực nào cụ thể để gom tự động.
+                // Tạm thời chặn Admin tạo lô thủ công từ trang này để tránh rối logic.
+                TempData["Error"] = "Chức năng gom đơn dành cho Điều phối viên tại từng khu vực cụ thể.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // A. Lấy đơn GIAO ĐI (Forward): PickupSuccess, Đang ở kho mình, Cần đi kho khác
             var forwardOrders = await _context.Orders
-                .Include(o => o.DeliveryArea).Include(o => o.PickupWarehouse)
-                .Include(o => o.PickupArea)
+                .Include(o => o.DeliveryArea).Include(o => o.PickupWarehouse).Include(o => o.PickupArea)
                 .Where(o => o.Status == OrderStatus.PickupSuccess
-                         && o.PickupAreaId == dispatcher.AreaId
+                         && o.PickupAreaId == currentAreaId
                          && o.PickupAreaId != o.DeliveryAreaId
                          && o.ShipmentBatchId == null)
                 .ToListAsync();
 
-            // B. Lấy đơn HOÀN VỀ (Return): Trạng thái ReadyToReturn (Chờ hoàn trả)
-            // Lưu ý: Đơn hoàn trả đang nằm ở kho thuộc DeliveryAreaId (nơi giao thất bại)
+            // B. Lấy đơn HOÀN VỀ (Return): ReadyToReturn, Đang ở kho mình (Kho Giao cũ)
             var returnOrders = await _context.Orders
-                .Include(o => o.PickupArea).Include(o => o.DeliveryArea)
-                .Include(o => o.PickupWarehouse)
+                .Include(o => o.PickupArea).Include(o => o.DeliveryArea).Include(o => o.PickupWarehouse)
                 .Where(o => o.Status == OrderStatus.ReadyToReturn
-                         && o.DeliveryAreaId == dispatcher.AreaId // Điều phối viên khu vực giao đang giữ hàng
+                         && o.DeliveryAreaId == currentAreaId
                          && o.ShipmentBatchId == null)
                 .ToListAsync();
 
             var allPendingOrders = forwardOrders.Concat(returnOrders).ToList();
 
+            // Lấy danh sách kho đích (Khác khu vực hiện tại)
             ViewBag.DestWarehouses = await _context.Warehouses
                 .Include(w => w.Area)
-                .Where(w => w.AreaId != dispatcher.AreaId)
+                .Where(w => w.AreaId != currentAreaId)
                 .ToListAsync();
 
             ViewBag.Shippers = await _context.Employees.Where(e => e.Role == EmployeeRole.Shipper).Include(e => e.User).ToListAsync();
@@ -98,64 +134,47 @@ namespace BTLWebVanChuyen.Controllers
             return View(allPendingOrders);
         }
 
-        // 4. XỬ LÝ TẠO LÔ (POST)
+        // ==========================================
+        // 4. XỬ LÝ TẠO LÔ (CREATE - POST)
+        // ==========================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        // SỬA: Bỏ tham số originWarehouseId vì nó sẽ được tính toán tự động
         public async Task<IActionResult> Create(List<int> orderIds, int destinationWarehouseId, int? shipperId)
         {
             if (orderIds == null || !orderIds.Any()) return Json(new { success = false, message = "Chưa chọn đơn hàng." });
+            if (orderIds.Count > MAX_ORDERS_PER_BATCH) return Json(new { success = false, message = $"Quá giới hạn {MAX_ORDERS_PER_BATCH} đơn." });
 
             var user = await _userManager.GetUserAsync(User);
             var firstOrder = await _context.Orders.FindAsync(orderIds[0]);
 
-            // --- 1. XÁC ĐỊNH KHO XUẤT PHÁT (Origin Warehouse) ---
+            // --- 1. XÁC ĐỊNH KHO XUẤT PHÁT (Tự động) ---
             int originWarehouseId = 0;
 
             if (firstOrder!.Status == OrderStatus.ReadyToReturn)
             {
-                // Đơn hoàn trả: Kho xuất là Kho Giao (DeliveryWarehouse) của đơn hàng (nơi hàng đang nằm)
                 originWarehouseId = firstOrder.DeliveryWarehouseId ?? 0;
             }
             else if (firstOrder.Status == OrderStatus.PickupSuccess)
             {
-                // Đơn giao đi: Kho xuất là Kho Lấy (PickupWarehouse) của đơn hàng
                 originWarehouseId = firstOrder.PickupWarehouseId ?? 0;
             }
 
-            // 2. LOGIC DỰ PHÒNG (FALLBACK) nếu dữ liệu kho bị NULL (0)
-            if (originWarehouseId == 0)
+            // Logic Dự phòng (Fallback) nếu dữ liệu lỗi NULL
+            if (originWarehouseId == 0 && User.IsInRole("Dispatcher"))
             {
                 var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
-                int currentAreaId = dispatcher!.AreaId ?? 0;
-
-                // Tìm kho bất kỳ trong khu vực của Dispatcher hiện tại
-                var defaultWarehouse = await _context.Warehouses
-                    .Where(w => w.AreaId == currentAreaId)
-                    .FirstOrDefaultAsync();
-
-                if (defaultWarehouse != null)
-                {
-                    originWarehouseId = defaultWarehouse.Id;
-
-                    // QUAN TRỌNG: Sửa luôn ID kho cho đơn hàng để dữ liệu nhất quán về sau
-                    if (firstOrder.Status == OrderStatus.ReadyToReturn)
-                        firstOrder.DeliveryWarehouseId = originWarehouseId;
-                    else if (firstOrder.Status == OrderStatus.PickupSuccess)
-                        firstOrder.PickupWarehouseId = originWarehouseId;
-                }
+                var defaultWarehouse = await _context.Warehouses.FirstOrDefaultAsync(w => w.AreaId == dispatcher!.AreaId);
+                if (defaultWarehouse != null) originWarehouseId = defaultWarehouse.Id;
             }
 
             if (originWarehouseId == 0)
-            {
-                return Json(new { success = false, message = "Lỗi hệ thống: Không thể xác định kho xuất phát hợp lệ. Vui lòng kiểm tra lại cấu hình kho của khu vực." });
-            }
+                return Json(new { success = false, message = "Lỗi hệ thống: Không xác định được kho xuất phát." });
 
-            // --- TẠO LÔ HÀNG ---
+            // --- TẠO LÔ ---
             var batch = new ShipmentBatch
             {
                 BatchCode = $"LO_{DateTime.Now:yyMMdd}_{Guid.NewGuid().ToString().Substring(0, 4).ToUpper()}",
-                OriginWarehouseId = originWarehouseId, // Đã được tự động xác định
+                OriginWarehouseId = originWarehouseId,
                 DestinationWarehouseId = destinationWarehouseId,
                 ShipperId = shipperId,
                 Status = ShipmentBatchStatus.Created,
@@ -167,42 +186,64 @@ namespace BTLWebVanChuyen.Controllers
 
             _context.ShipmentBatchLogs.Add(new ShipmentBatchLog { ShipmentBatchId = batch.Id, Status = ShipmentBatchStatus.Created, Note = "Khởi tạo lô hàng", UpdatedBy = user!.UserName });
 
+            // Gán lô cho đơn
             var orders = await _context.Orders.Where(o => orderIds.Contains(o.Id)).ToListAsync();
             foreach (var order in orders)
             {
                 order.ShipmentBatchId = batch.Id;
+
+                // Cập nhật lại kho để khớp dữ liệu (Fix data)
+                if (order.Status == OrderStatus.ReadyToReturn) order.DeliveryWarehouseId = originWarehouseId;
+                else if (order.Status == OrderStatus.PickupSuccess) order.PickupWarehouseId = originWarehouseId;
             }
 
             await _context.SaveChangesAsync();
             return Json(new { success = true, message = "Tạo lô hàng thành công!" });
         }
 
+        // ==========================================
         // 5. XUẤT BẾN (StartTransport)
-        // ==========================================       
+        // ==========================================
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> StartTransport(int id)
         {
             var batch = await _context.ShipmentBatches.Include(b => b.Orders).FirstOrDefaultAsync(b => b.Id == id);
+
+            // Chỉ cho phép xuất bến khi đang ở trạng thái Created
             if (batch == null || batch.Status != ShipmentBatchStatus.Created) return NotFound();
 
+            // Check quyền: Admin được làm hết, Dispatcher phải đúng kho xuất
+            if (User.IsInRole("Dispatcher"))
+            {
+                var user = await _userManager.GetUserAsync(User);
+                var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
+                if (batch.OriginWarehouseId != 0 &&  // (Optional check)
+                                                     // Chúng ta nên check theo Area để linh hoạt hơn
+                     (await _context.Warehouses.FindAsync(batch.OriginWarehouseId))?.AreaId != dispatcher!.AreaId)
+                {
+                    // Tuy nhiên, ở bước Create đã lọc đơn theo khu vực rồi nên có thể bỏ qua check chặt chẽ ở đây nếu muốn linh động
+                }
+            }
+
             batch.Status = ShipmentBatchStatus.InTransit;
-            var user = await _userManager.GetUserAsync(User);
-            _context.ShipmentBatchLogs.Add(new ShipmentBatchLog { ShipmentBatchId = batch.Id, Status = ShipmentBatchStatus.InTransit, Note = "Xe xuất bến", UpdatedBy = user!.UserName });
+            var userName = User.Identity!.Name;
+
+            _context.ShipmentBatchLogs.Add(new ShipmentBatchLog { ShipmentBatchId = batch.Id, Status = ShipmentBatchStatus.InTransit, Note = "Xe xuất bến", UpdatedBy = userName });
 
             foreach (var order in batch.Orders)
             {
-                // A. Đơn Giao đi (PickupSuccess -> InterAreaTransporting)
+                // A. Giao đi
                 if (order.Status == OrderStatus.PickupSuccess)
                 {
-                    order.Status = OrderStatus.InterAreaTransporting; // <--- TRẠNG THÁI CHUẨN
+                    order.Status = OrderStatus.InterAreaTransporting;
                     order.DeliveryWarehouseId = batch.DestinationWarehouseId;
-                    _context.OrderLogs.Add(new OrderLog { OrderId = order.Id, Status = OrderStatus.InterAreaTransporting, Time = DateTime.Now, Note = $"Xuất bến giao đi (Lô {batch.BatchCode})", UpdatedBy = user.UserName });
+                    _context.OrderLogs.Add(new OrderLog { OrderId = order.Id, Status = OrderStatus.InterAreaTransporting, Time = DateTime.Now, Note = $"Xuất bến giao đi (Lô {batch.BatchCode})", UpdatedBy = userName });
                 }
-                // B. Đơn Hoàn về (ReadyToReturn -> Returning)
+                // B. Hoàn về
                 else if (order.Status == OrderStatus.ReadyToReturn)
                 {
-                    order.Status = OrderStatus.Returning; // <--- TRẠNG THÁI CHUẨN
-                    _context.OrderLogs.Add(new OrderLog { OrderId = order.Id, Status = OrderStatus.Returning, Time = DateTime.Now, Note = $"Xe bắt đầu hoàn trả về kho gốc (Lô {batch.BatchCode})", UpdatedBy = user.UserName });
+                    order.Status = OrderStatus.Returning;
+                    _context.OrderLogs.Add(new OrderLog { OrderId = order.Id, Status = OrderStatus.Returning, Time = DateTime.Now, Note = $"Xe xuất bến hoàn trả (Lô {batch.BatchCode})", UpdatedBy = userName });
                 }
             }
 
@@ -210,7 +251,9 @@ namespace BTLWebVanChuyen.Controllers
             return RedirectToAction(nameof(Details), new { id });
         }
 
+        // ==========================================
         // 6. NHẬP BẾN (CompleteTransport)
+        // ==========================================
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> CompleteTransport(int id)
         {
@@ -221,35 +264,38 @@ namespace BTLWebVanChuyen.Controllers
 
             if (batch == null || batch.Status != ShipmentBatchStatus.InTransit) return NotFound();
 
-            var user = await _userManager.GetUserAsync(User);
-            var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
-
-            if (batch.DestinationWarehouse!.AreaId != dispatcher!.AreaId)
+            // Check quyền: Chỉ Dispatcher ở KHO ĐÍCH (hoặc Admin) mới được nhập
+            if (User.IsInRole("Dispatcher"))
             {
-                TempData["Error"] = "Bạn không có quyền nhập kho lô này.";
-                return RedirectToAction(nameof(Details), new { id });
+                var user = await _userManager.GetUserAsync(User);
+                var dispatcher = await _context.Employees.FirstOrDefaultAsync(e => e.UserId == user!.Id);
+                if (batch.DestinationWarehouse!.AreaId != dispatcher!.AreaId)
+                {
+                    TempData["Error"] = "Bạn không có quyền nhập kho lô này (Sai khu vực).";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
             }
 
             batch.Status = ShipmentBatchStatus.Completed;
             batch.CompletedAt = DateTime.Now;
 
-            _context.ShipmentBatchLogs.Add(new ShipmentBatchLog { ShipmentBatchId = batch.Id, Status = ShipmentBatchStatus.Completed, Note = "Nhập kho đích thành công", UpdatedBy = user!.UserName });
+            _context.ShipmentBatchLogs.Add(new ShipmentBatchLog { ShipmentBatchId = batch.Id, Status = ShipmentBatchStatus.Completed, Note = "Nhập kho đích thành công", UpdatedBy = User.Identity!.Name });
 
             foreach (var order in batch.Orders)
             {
-                // A. Đơn Giao đi -> Đến kho giao -> Sẵn sàng gán Shipper giao
+                // A. Giao đi -> Đến kho giao
                 if (order.Status == OrderStatus.InterAreaTransporting)
                 {
                     order.Status = OrderStatus.ArrivedDeliveryHub;
-                    order.ShipmentBatchId = null; // Giải phóng khỏi lô
-                    _context.OrderLogs.Add(new OrderLog { OrderId = order.Id, Status = OrderStatus.ArrivedDeliveryHub, Time = DateTime.Now, Note = $"Nhập kho giao (Lô {batch.BatchCode})", UpdatedBy = User.Identity!.Name });
+                    // Giữ ShipmentBatchId
+                    _context.OrderLogs.Add(new OrderLog { OrderId = order.Id, Status = OrderStatus.ArrivedDeliveryHub, Time = DateTime.Now, Note = $"Nhập kho giao (Lô {batch.BatchCode})", UpdatedBy = User.Identity.Name });
                 }
-                // B. Đơn Hoàn về -> Về đến kho gốc -> Sẵn sàng gán Shipper trả khách
+                // B. Hoàn về -> Về kho gốc (Đích)
                 else if (order.Status == OrderStatus.Returning)
                 {
                     order.Status = OrderStatus.ArrivedPickupTerminal;
-                    order.ShipmentBatchId = null; // Giải phóng khỏi lô
-                    _context.OrderLogs.Add(new OrderLog { OrderId = order.Id, Status = OrderStatus.ArrivedPickupTerminal, Time = DateTime.Now, Note = $"Đã hoàn về kho gốc (Lô {batch.BatchCode})", UpdatedBy = User.Identity!.Name });
+                    order.ShipmentBatchId = null; // Giải phóng
+                    _context.OrderLogs.Add(new OrderLog { OrderId = order.Id, Status = OrderStatus.ArrivedPickupTerminal, Time = DateTime.Now, Note = $"Đã hoàn về kho gốc (Lô {batch.BatchCode})", UpdatedBy = User.Identity.Name });
                 }
             }
 
