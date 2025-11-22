@@ -133,36 +133,55 @@ namespace BTLWebVanChuyen.Controllers
                 ModelState.AddModelError("AreaId", "Khu vực này đã có bảng giá khác.");
             }
 
-            if (ModelState.IsValid)
+            // If invalid, re-show view with errors (also add error summary for easier visibility)
+            if (!ModelState.IsValid)
             {
-                try
+                var errors = string.Join(" | ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrEmpty(m)));
+                if (!string.IsNullOrEmpty(errors)) ModelState.AddModelError(string.Empty, "Validation errors: " + errors);
+                ViewData["AreaId"] = new SelectList(_context.Areas, "AreaId", "AreaName", price.AreaId);
+                return View(price);
+            }
+
+            var existing = await _context.PriceTables.FindAsync(id);
+            if (existing == null) return NotFound();
+
+            // Copy posted values into tracked entity
+            existing.AreaId = price.AreaId;
+            existing.BasePrice = price.BasePrice;
+            existing.PricePerKm = price.PricePerKm;
+            existing.WeightPrice = price.WeightPrice;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                // Notifications (original behavior)
+                var adminUserIds = await GetAdminUserIdsAsync();
+                var areaName = await _context.Areas.Where(a => a.AreaId == existing.AreaId).Select(a => a.AreaName).FirstOrDefaultAsync();
+                await CreateNotificationsAsync(adminUserIds,
+                    $"Bảng giá cho khu vực '{areaName}' đã được cập nhật.");
+
+                var customerUserIds = await _context.Customers.Select(c => c.UserId).ToListAsync();
+                if (customerUserIds.Any())
                 {
-                    _context.Update(price);
-                    await _context.SaveChangesAsync();
-                    
-                    // Thông báo cho admin
-                    var adminUserIds = await GetAdminUserIdsAsync();
-                    var areaName = await _context.Areas.Where(a => a.AreaId == price.AreaId).Select(a => a.AreaName).FirstOrDefaultAsync();
-                    await CreateNotificationsAsync(adminUserIds, 
-                        $"Bảng giá cho khu vực '{areaName}' đã được cập nhật.");
-                    
-                    // Thông báo cho tất cả customers (vì ảnh hưởng đến giá)
-                    var customerUserIds = await _context.Customers.Select(c => c.UserId).ToListAsync();
-                    if (customerUserIds.Any())
-                    {
-                        await CreateNotificationsAsync(customerUserIds,
-                            $"Bảng giá vận chuyển đã được cập nhật. Vui lòng kiểm tra giá mới khi đặt hàng.");
-                    }
-                    
-                    TempData["Message"] = "Cập nhật thành công.";
+                    await CreateNotificationsAsync(customerUserIds,
+                        $"Bảng giá vận chuyển đã được cập nhật. Vui lòng kiểm tra giá mới khi đặt hàng.");
                 }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!_context.PriceTables.Any(e => e.Id == id)) return NotFound();
-                    else throw;
-                }
+
+                TempData["Message"] = "Cập nhật thành công.";
                 return RedirectToAction(nameof(Index));
             }
+            catch (DbUpdateException dbEx)
+            {
+                // Surface DB errors to the view
+                ModelState.AddModelError(string.Empty, "Database error: " + dbEx.GetBaseException().Message);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError(string.Empty, "Unexpected error: " + ex.GetBaseException().Message);
+            }
+
+            // On exception, re-show view and display errors in validation summary
             ViewData["AreaId"] = new SelectList(_context.Areas, "AreaId", "AreaName", price.AreaId);
             return View(price);
         }
