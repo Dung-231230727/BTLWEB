@@ -4,6 +4,7 @@ using BTLWebVanChuyen.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BTLWebVanChuyen.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251121203438_V")]
+    partial class V
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -447,36 +450,6 @@ namespace BTLWebVanChuyen.Migrations
                     b.ToTable("ShipmentBatches");
                 });
 
-            modelBuilder.Entity("BTLWebVanChuyen.Models.ShipmentBatchLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ShipmentBatchId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("Time")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ShipmentBatchId");
-
-                    b.ToTable("ShipmentBatchLogs");
-                });
-
             modelBuilder.Entity("BTLWebVanChuyen.Models.Wallet", b =>
                 {
                     b.Property<int>("Id")
@@ -848,17 +821,6 @@ namespace BTLWebVanChuyen.Migrations
                     b.Navigation("Shipper");
                 });
 
-            modelBuilder.Entity("BTLWebVanChuyen.Models.ShipmentBatchLog", b =>
-                {
-                    b.HasOne("BTLWebVanChuyen.Models.ShipmentBatch", "ShipmentBatch")
-                        .WithMany("BatchLogs")
-                        .HasForeignKey("ShipmentBatchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ShipmentBatch");
-                });
-
             modelBuilder.Entity("BTLWebVanChuyen.Models.Wallet", b =>
                 {
                     b.HasOne("BTLWebVanChuyen.Models.ApplicationUser", "User")
@@ -980,8 +942,6 @@ namespace BTLWebVanChuyen.Migrations
 
             modelBuilder.Entity("BTLWebVanChuyen.Models.ShipmentBatch", b =>
                 {
-                    b.Navigation("BatchLogs");
-
                     b.Navigation("Orders");
                 });
 #pragma warning restore 612, 618

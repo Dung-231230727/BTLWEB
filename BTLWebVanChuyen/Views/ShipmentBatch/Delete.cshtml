@@ -1,0 +1,50 @@
+﻿@model BTLWebVanChuyen.Models.ShipmentBatch
+@using BTLWebVanChuyen.Models
+
+@{
+    ViewData["Title"] = "Xóa Lô hàng";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="text-center mb-4">
+            <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow-sm" style="width: 80px; height: 80px;">
+                <i class="fa-solid fa-trash-can fa-3x text-danger"></i>
+            </div>
+            <h3 class="fw-bold text-dark">Xóa Lô Hàng?</h3>
+            <p class="text-muted">
+                Bạn có chắc chắn muốn xóa lô hàng <strong>@Model.BatchCode</strong>?<br />
+                Các đơn hàng trong lô sẽ được giải phóng và quay lại trạng thái chờ gom lô.
+            </p>
+        </div>
+
+        <div class="card shadow-lg border-0 rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h5 class="text-center text-uppercase text-secondary fw-bold mb-4">Thông tin chi tiết</h5>
+                <dl class="row g-3 align-items-center">
+                    <dt class="col-sm-4 text-secondary small text-uppercase">Kho xuất</dt>
+                    <dd class="col-sm-8 fw-bold">@Model.OriginWarehouse?.Name</dd>
+
+                    <dt class="col-sm-4 text-secondary small text-uppercase">Kho đích</dt>
+                    <dd class="col-sm-8 fw-bold">@Model.DestinationWarehouse?.Name</dd>
+
+                    <dt class="col-sm-4 text-secondary small text-uppercase">Tài xế</dt>
+                    <dd class="col-sm-8">@(Model.Shipper?.User?.FullName ?? "Chưa gán")</dd>
+
+                    <dt class="col-sm-4 text-secondary small text-uppercase">Số lượng đơn</dt>
+                    <dd class="col-sm-8"><span class="badge bg-info text-dark rounded-pill">@Model.Orders?.Count() đơn hàng</span></dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="d-flex gap-3">
+            <form asp-action="Delete" method="post" class="flex-grow-1">
+                <input type="hidden" asp-for="Id" />
+                <button type="submit" class="btn btn-danger w-100 py-3 fw-bold rounded-pill shadow-sm hover-top">Xác nhận Xóa</button>
+            </form>
+            <a asp-action="Index" class="btn btn-light flex-grow-1 py-3 fw-bold rounded-pill text-secondary hover-top text-center text-decoration-none border">
+                Hủy bỏ
+            </a>
+        </div>
+    </div>
+</div>

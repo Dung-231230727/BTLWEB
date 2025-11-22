@@ -69,6 +69,10 @@ namespace BTLWebVanChuyen.Models
         //ghi chú
         public string? FailureReason { get; set; }
 
+        // [MỚI] Liên kết với Lô hàng
+        public int? ShipmentBatchId { get; set; }
+        public ShipmentBatch? ShipmentBatch { get; set; }
+
         // Navigation
         public ICollection<OrderLog>? OrderLogs { get; set; }
     }
