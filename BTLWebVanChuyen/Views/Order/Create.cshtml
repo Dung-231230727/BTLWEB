@@ -18,6 +18,9 @@
                 <form asp-action="Create" method="post">
                     <div asp-validation-summary="All" class="alert alert-danger border-0 rounded-3 shadow-sm mb-4" style="display:none"></div>
 
+                    <!-- Thêm hidden field để lưu tổng giá -->
+                    <input type="hidden" asp-for="Order.TotalPrice" id="TotalPriceHidden" />
+
                     <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">1. Thông tin Vận chuyển</h5>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
@@ -115,7 +118,7 @@
 
                     <div class="bg-primary bg-opacity-10 p-4 rounded-4 mb-4 text-center border border-primary border-opacity-25">
                         <h6 class="text-uppercase text-primary fw-bold mb-2">Tổng chi phí dự kiến</h6>
-                        <input id="TotalPrice" class="form-control-plaintext text-center fw-bold display-6 text-dark" readonly value="0 VNĐ" />
+                        <input id="TotalPriceDisplay" class="form-control-plaintext text-center fw-bold display-6 text-dark" readonly value="0 VNĐ" />
                     </div>
 
                     <div class="d-flex gap-3">
@@ -139,8 +142,11 @@
         const elDest = document.getElementById('txtDestination');
         const elDist = document.getElementById('DistanceKm');
         const elWeight = document.getElementById('WeightKg');
-        const elPrice = document.getElementById("TotalPrice");
+
+        const elPriceDisplay = document.getElementById("TotalPriceDisplay"); // Hiển thị
+        const elPriceHidden = document.getElementById("TotalPriceHidden");   // Hidden field
         const elStatus = document.getElementById('mapStatus');
+
 
         const elPickupArea = document.getElementById("PickupAreaId");
         const elDeliveryArea = document.getElementById("DeliveryAreaId");
@@ -264,7 +270,8 @@
             const weight = parseFloat(elWeight.value) || 0;
 
             if (!pickupId || !deliveryId || distance <= 0 || weight <= 0) {
-                elPrice.value = "0 VNĐ";
+                elPriceDisplay.value = "0 VNĐ";
+                elPriceHidden.value = "0";
                 return;
             }
 
@@ -272,7 +279,8 @@
             const delivery = priceTables.find(p => p.AreaId === deliveryId);
 
             if (!pickup || !delivery) {
-                elPrice.value = "0 VNĐ";
+                elPriceDisplay.value = "0 VNĐ";
+                elPriceHidden.value = "0";
                 return;
             }
 
@@ -293,7 +301,9 @@
             // Làm tròn lên nghìn đồng
             total = Math.ceil(total / 1000) * 1000;
 
-            elPrice.value = total.toLocaleString() + " VNĐ";
+            // Cập nhật cả display và hidden field
+            elPriceDisplay.value = total.toLocaleString() + " VNĐ";
+            elPriceHidden.value = total.toString();
         }
 
 

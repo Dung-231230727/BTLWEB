@@ -588,43 +588,43 @@ namespace BTLWebVanChuyen.Controllers
             };
 
             // === CÁC HỆ SỐ ĐIỀU CHỈNH ĐỂ ĐẠT MỤC TIÊU PHÍ ===
-            const decimal LOCAL_DISTANCE_FACTOR = 0.25m;
-            const decimal LOCAL_WEIGHT_FACTOR = 0.50m;
-            const decimal DISCOUNT_RATE = 0.10m; // 10% chiết khấu cho vận chuyển liên tỉnh
+            //const decimal LOCAL_DISTANCE_FACTOR = 0.25m;
+            //const decimal LOCAL_WEIGHT_FACTOR = 0.50m;
+            //const decimal DISCOUNT_RATE = 0.10m; // 10% chiết khấu cho vận chuyển liên tỉnh
 
-            bool isInterArea = order.PickupAreaId != order.DeliveryAreaId;
+            //bool isInterArea = order.PickupAreaId != order.DeliveryAreaId;
 
-            var pickupPrice = await _context.PriceTables.FirstOrDefaultAsync(p => p.AreaId == order.PickupAreaId);
-            var deliveryPrice = await _context.PriceTables.FirstOrDefaultAsync(p => p.AreaId == order.DeliveryAreaId);
-            decimal totalPrice = 0;
+            //var pickupPrice = await _context.PriceTables.FirstOrDefaultAsync(p => p.AreaId == order.PickupAreaId);
+            //var deliveryPrice = await _context.PriceTables.FirstOrDefaultAsync(p => p.AreaId == order.DeliveryAreaId);
+            //decimal totalPrice = 0;
 
-            if (pickupPrice != null && deliveryPrice != null)
-            {
-                // 1. Tính tổng chi phí Gốc (Coefficient = 1)
-                decimal baseCost = pickupPrice.BasePrice + deliveryPrice.BasePrice;
-                decimal distCost = order.DistanceKm * (pickupPrice.PricePerKm + deliveryPrice.PricePerKm);
-                decimal weightCost = order.WeightKg * (pickupPrice.WeightPrice + deliveryPrice.WeightPrice);
+            //if (pickupPrice != null && deliveryPrice != null)
+            //{
+            //    // 1. Tính tổng chi phí Gốc (Coefficient = 1)
+            //    decimal baseCost = pickupPrice.BasePrice + deliveryPrice.BasePrice;
+            //    decimal distCost = order.DistanceKm * (pickupPrice.PricePerKm + deliveryPrice.PricePerKm);
+            //    decimal weightCost = order.WeightKg * (pickupPrice.WeightPrice + deliveryPrice.WeightPrice);
 
-                // 2. Áp dụng Hệ số Điều chỉnh (Chỉ áp dụng khi nội tỉnh)
-                if (!isInterArea) // Local Area
-                {
-                    distCost *= LOCAL_DISTANCE_FACTOR;
-                    weightCost *= LOCAL_WEIGHT_FACTOR;
-                }
+            //    // 2. Áp dụng Hệ số Điều chỉnh (Chỉ áp dụng khi nội tỉnh)
+            //    if (!isInterArea) // Local Area
+            //    {
+            //        distCost *= LOCAL_DISTANCE_FACTOR;
+            //        weightCost *= LOCAL_WEIGHT_FACTOR;
+            //    }
 
-                totalPrice = baseCost + distCost + weightCost;
+            //    totalPrice = baseCost + distCost + weightCost;
 
-                // 3. Áp dụng Chiết khấu Gom Đơn (Chỉ áp dụng khi liên tỉnh)
-                if (isInterArea)
-                {
-                    totalPrice = totalPrice * (1.00m - DISCOUNT_RATE);
-                }
+            //    // 3. Áp dụng Chiết khấu Gom Đơn (Chỉ áp dụng khi liên tỉnh)
+            //    if (isInterArea)
+            //    {
+            //        totalPrice = totalPrice * (1.00m - DISCOUNT_RATE);
+            //    }
 
-                // 4. Làm tròn lên nghìn đồng gần nhất
-                totalPrice = Math.Ceiling(totalPrice / 1000m) * 1000m;
-            }
+            //    // 4. Làm tròn lên nghìn đồng gần nhất
+            //    totalPrice = Math.Ceiling(totalPrice / 1000m) * 1000m;
+            //}
 
-            order.TotalPrice = totalPrice;
+            //order.TotalPrice = totalPrice;
 
             order.Payer = vm.Payer;
             order.PaymentMethod = vm.PaymentMethod;
