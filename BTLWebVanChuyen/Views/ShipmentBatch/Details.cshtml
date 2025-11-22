@@ -1,5 +1,6 @@
 ﻿@model BTLWebVanChuyen.Models.ShipmentBatch
 @using BTLWebVanChuyen.Models
+@using BTLWebVanChuyen.Utility
 @{
     ViewData["Title"] = "Chi tiết Lô hàng";
     int currentAreaId = ViewBag.CurrentAreaId;
@@ -170,7 +171,7 @@
                                                 <small class="text-muted" style="font-size: 10px;">@log.Time.ToString("dd/MM")</small>
                                             </div>
                                             <div>
-                                                <div class="fw-bold text-dark">@log.Status</div>
+                                                <div class="fw-bold text-dark">@log.Status.GetDisplayName()</div>
                                                 <small class="text-muted">@log.Note <span class="fst-italic ms-1">(@log.UpdatedBy)</span></small>
                                             </div>
                                         </div>
