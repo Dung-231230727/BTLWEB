@@ -18,7 +18,7 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// Trong Program.cs
+ // Trong Program.cs
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
